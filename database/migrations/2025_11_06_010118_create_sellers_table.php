@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description');
             $table->string('address');
+            $table->integer('balance')->default(0);
             $table->string('phone', 15);
             $table->string('logo');
             $table->string('banner');

@@ -2,14 +2,18 @@
 
 use App\Http\Controllers\Admin\BuyerController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SellerController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\VerificationController;
+use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -51,7 +55,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('reports', ReportController::class)->except(['create', 'store', 'edit', 'destroy']);
     Route::resource('notifications', NotificationController::class)->except(['create', 'update', 'edit', 'destroy']);
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chats.index');
+    Route::get('/chat/history/{user}', [ChatController::class, 'history'])->name('chats.history');
+    Route::post('/chat/send', [ChatController::class, 'store'])->name('chats.store');
+    Route::delete('/chat/clear/{user}', [ChatController::class, 'clearConversation'])->name('chats.clear');
+    Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+    Route::put('/withdrawals/{withdrawal}', [WithdrawalController::class, 'update'])->name('withdrawals.update');
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 });
+Route::get('/chat/search-user', [ChatController::class, 'searchNewUser'])->name('chats.search_user'); 
 
 // Route::middleware(['auth', 'seller.approved'])->group(function () {
 //     Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');

@@ -251,6 +251,20 @@
                     </a>
                 </li>
 
+                <li>
+                    <a href="{{ route('admin.withdrawals.index') }}"
+                        class="flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors group
+                        {{ $isTransaction ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium' }}">
+                        <svg class="w-5 h-5 mr-3 transition-colors {{ $isTransaction ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0zM4 9a1 1 0 100-2 1 1 0 000 2zm13-1a1 1 0 11-2 0 1 1 0 012 0zM1.75 14.5a.75.75 0 000 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 00-1.5 0v.784a.272.272 0 01-.35.25A49.043 49.043 0 001.75 14.5z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Manajemen Keuangan
+                    </a>
+                </li>
+
                 <div class="pt-4 mt-4 border-t border-gray-200">
                     <li>
                         <button @click="logoutModal = true"
@@ -276,31 +290,173 @@
         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
     </div>
     <div class="flex-1 flex flex-col h-screen overflow-y-auto">
-        <header class="sticky top-0 bg-white border-b border-gray-200 z-30">
+        <header class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-200 z-30">
             <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-                <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3.75 6.75h16.5M3.75 12h16.5m-1.5 5.25h16.5" />
-                    </svg>
-                </button>
-                <div class="flex-1"></div>
-                <div x-data="{ dropdownOpen: false }" class="relative">
-                    <button @click="dropdownOpen = !dropdownOpen" class="flex items-center space-x-2">
-                        <span class="text-sm font-medium text-gray-700 hidden sm:block">Hi,
-                            {{ Auth::user()->name ?? 'Admin' }}</span>
-                        <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+
+                <div class="flex items-center">
+                    <button @click="sidebarOpen = !sidebarOpen"
+                        class="lg:hidden text-gray-500 hover:text-gray-700 transition p-2 rounded-md hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M3.75 6.75h16.5M3.75 12h16.5m-1.5 5.25h16.5" />
                         </svg>
                     </button>
-                    <div x-show="dropdownOpen" @click.away="dropdownOpen = false" x-transition
-                        class="absolute right-0 w-48 mt-2 bg-white rounded-md shadow-lg py-1 z-30"
-                        style="display: none;">
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profil</a>
-                        <a href="{{ route('auth.logout') }}"
-                            class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Keluar</a>
+
+                    <div
+                        class="hidden lg:flex items-center ml-4 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span class="relative flex h-2 w-2 mr-2">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span class="text-xs font-medium text-green-700 tracking-wide">ONLINE</span>
+                    </div>
+                </div>
+
+                <div class="hidden md:flex items-center justify-center flex-1" x-data="{
+                    date: '{{ \Carbon\Carbon::now()->locale('id')->translatedFormat('l, d F') }}',
+                    time: '{{ \Carbon\Carbon::now()->format('H:i:s') }}',
+                    greeting: '{{ \Carbon\Carbon::now()->hour < 10 ? 'Selamat Pagi ☀️' : (\Carbon\Carbon::now()->hour < 15 ? 'Selamat Siang 🌤️' : (\Carbon\Carbon::now()->hour < 18 ? 'Selamat Sore 🌥️' : 'Selamat Malam 🌙')) }}',
+                
+                    initClock() {
+                        const update = () => {
+                            const now = new Date();
+                            this.date = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+                            this.time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace('.', ':');
+                
+                            const h = now.getHours();
+                            if (h < 10) this.greeting = 'Selamat Pagi ☀️';
+                            else if (h < 15) this.greeting = 'Selamat Siang 🌤️';
+                            else if (h < 18) this.greeting = 'Selamat Sore 🌥️';
+                            else this.greeting = 'Selamat Malam 🌙';
+                        };
+                        setInterval(update, 1000);
+                    }
+                }"
+                    x-init="initClock()">
+
+                    <div
+                        class="flex items-center bg-gray-50 border border-gray-200 rounded-full px-5 py-1.5 shadow-sm">
+                        <span class="text-sm font-semibold text-gray-700 mr-3" x-text="greeting">
+                            {{ \Carbon\Carbon::now()->hour < 10 ? 'Selamat Pagi ☀️' : (\Carbon\Carbon::now()->hour < 15 ? 'Selamat Siang 🌤️' : (\Carbon\Carbon::now()->hour < 18 ? 'Selamat Sore 🌥️' : 'Selamat Malam 🌙')) }}
+                        </span>
+
+                        <div class="h-4 w-px bg-gray-300 mx-1"></div>
+
+                        <span class="text-sm text-gray-500 mx-3" x-text="date">
+                            {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('l, d F') }}
+                        </span>
+
+                        <div class="h-4 w-px bg-gray-300 mx-1"></div>
+
+                        <span class="text-sm font-mono font-bold text-green-600 ml-3 min-w-20" x-text="time">
+                            {{ \Carbon\Carbon::now()->format('H:i:s') }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-4">
+
+                    <a href="{{ route('admin.chats.index') }}"
+                        class="relative p-2 text-gray-400 hover:bg-gray-100 hover:text-green-600 rounded-lg transition-all group"
+                        title="Pesan">
+
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+
+                        @if (isset($unreadChatCount) && $unreadChatCount > 0)
+                            <span
+                                class="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold border-2 border-white">
+                                {{ $unreadChatCount > 99 ? '99+' : $unreadChatCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <a href="{{ route('admin.notifications.index') }}"
+                        class="relative p-2 text-gray-400 hover:bg-gray-100 hover:text-green-600 rounded-lg transition-all"
+                        title="Notifikasi">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+                        <span
+                            class="absolute top-2.5 right-2.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                    </a>
+
+                    <div class="h-8 w-px bg-gray-200 mx-1"></div>
+
+                    <div x-data="{ dropdownOpen: false }" class="relative">
+                        <button @click="dropdownOpen = !dropdownOpen"
+                            class="flex items-center gap-3 hover:bg-gray-50 p-1.5 rounded-xl transition-all border border-transparent hover:border-gray-100 group">
+                            <div
+                                class="w-9 h-9 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white group-hover:ring-green-100 transition">
+                                {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
+                            </div>
+
+                            <div class="hidden md:block text-left">
+                                <p class="text-sm font-semibold text-gray-700 leading-none">
+                                    {{ Auth::user()->name ?? 'Admin' }}</p>
+                                <p class="text-xs text-gray-400 mt-1 leading-none">Administrator</p>
+                            </div>
+
+                            <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600"
+                                :class="{ 'rotate-180': dropdownOpen }" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="dropdownOpen" @click.away="dropdownOpen = false"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                            style="display: none;">
+
+                            <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/50 rounded-t-xl md:hidden">
+                                <p class="text-sm font-bold text-gray-900">{{ Auth::user()->name ?? 'Admin' }}</p>
+                                <p class="text-xs text-gray-500">Administrator</p>
+                            </div>
+
+                            <div class="px-2 space-y-1 pt-1">
+                                <a href="{{ route('admin.profile.index') }}"
+                                    class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition">
+                                    <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    Profil Saya
+                                </a>
+                                <a href="{{ route('admin.settings.index') }}"
+                                    class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition">
+                                    <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Pengaturan
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <button @click="logoutModal = true"
+                                    class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
+                                    <svg class="w-4 h-4 mr-3 text-red-400" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    Keluar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

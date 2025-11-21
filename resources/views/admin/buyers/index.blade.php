@@ -12,11 +12,12 @@
     
         formatDate(dateString) {
             if (!dateString) return 'N/A';
-            return new Date(dateString).toLocaleDateString('id-ID', {
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('id-ID', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
-            });
+            }).format(date);
         },
     
         getAvatarUrl(path) {
@@ -157,7 +158,7 @@
                                 </td>
 
                                 <td class="px-4 py-4 text-sm text-gray-700">
-                                    {{ $buyer->created_at->format('d M Y') }}
+                                    {{ \Carbon\Carbon::parse($buyer->created_at)->locale('id')->translatedFormat('d F Y') }}
                                 </td>
 
                                 <td class="px-4 py-4 text-sm">

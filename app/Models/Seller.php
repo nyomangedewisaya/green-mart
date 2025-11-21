@@ -37,6 +37,11 @@ class Seller extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function withdrawals()
+    {
+        return $this->hasMany(Withdrawal::class);
+    }
+
     public function getRouteKeyName()
     {
         return 'slug';

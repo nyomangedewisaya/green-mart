@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,6 +16,8 @@ return new class extends Migration
             $table->foreignId('receiver_id')->constrained('users')->cascadeOnDelete();
             $table->text('message');
             $table->boolean('is_read');
+            $table->boolean('deleted_by_sender')->default(false);
+            $table->boolean('deleted_by_receiver')->default(false);
             $table->timestamps();
         });
     }

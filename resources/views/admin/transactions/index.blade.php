@@ -8,18 +8,23 @@
         modalOrder: null,
         searchQuery: '{{ request('search', '') }}',
     
-        // Helper Format Rupiah
         formatCurrency(value) {
             if (isNaN(value)) return 'Rp 0';
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
         },
-        // Helper Format Tanggal
+    
         formatDate(dateString) {
             if (!dateString) return '-';
-            return new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
         }
     }" x-init="$nextTick(() => {
-        // Init Tom Select
         new TomSelect($refs.statusSelect, { create: false, placeholder: 'Semua Status', onChange: () => $refs.filterForm.submit() });
         new TomSelect($refs.sellerSelect, { create: false, placeholder: 'Semua Seller', onChange: () => $refs.filterForm.submit() });
         new TomSelect($refs.perPageSelect, { create: false, controlInput: null, onChange: () => $refs.filterForm.submit() });
@@ -136,7 +141,8 @@
                                     #{{ $order->order_code }}
                                 </td>
                                 <td class="px-4 py-4 text-sm text-gray-600">
-                                    {{ $order->created_at->format('d/m/Y H:i') }}
+                                    {{ \Carbon\Carbon::parse($order->created_at)->locale('id')->translatedFormat('d M Y, H:i') }}
+                                    WIB
                                 </td>
                                 <td class="px-4 py-4 text-sm text-gray-900">
                                     {{ $order->user->name ?? 'Guest' }}

@@ -28,10 +28,11 @@
             if (!dateString) return 'N/A';
             return new Date(dateString).toLocaleDateString('id-ID', {
                 day: 'numeric',
-                month: 'long',
+                month: 'short',
                 year: 'numeric'
             });
         },
+    
         formatDateForInput(dateString) {
             if (!dateString) return '';
             return dateString.split('T')[0];
@@ -243,7 +244,8 @@
                                 </td>
                                 <td class="px-4 py-4 text-sm text-gray-700">{{ $promo->seller->name ?? 'N/A' }}</td>
                                 <td class="px-4 py-4 text-sm text-gray-700">
-                                    {{ $promo->start_date->format('d M Y') }} - {{ $promo->end_date->format('d M Y') }}
+                                    {{ $promo->start_date->translatedFormat('d M Y') }} -
+                                    {{ $promo->end_date->translatedFormat('d M Y') }}
                                 </td>
                                 <td class="px-4 py-4 text-sm text-gray-700">Rp
                                     {{ number_format($promo->price, 0, ',', '.') }}</td>

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('role', ['admin', 'seller', 'buyer']);
             $table->string('avatar');
             $table->enum('status', ['active', 'pending', 'suspended']);
+            $table->timestamp('last_seen')->nullable();
             $table->timestamps();
         });
 

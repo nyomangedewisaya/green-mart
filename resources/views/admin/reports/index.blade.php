@@ -6,7 +6,17 @@
         detailModal: false,
         modalReport: null,
         searchQuery: '{{ request('search', '') }}',
-    
+        formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        },
         getImageUrl(path) {
             if (!path) return 'https://placehold.co/100x100/e0e0e0/757575?text=No+Image';
             if (path.startsWith('http')) return path;
@@ -147,7 +157,9 @@
                             @endphp
 
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-4 text-sm text-gray-600">{{ $report->created_at->format('d M Y') }}</td>
+                                <td class="px-4 py-4 text-sm text-gray-600">
+                                    {{ \Carbon\Carbon::parse($report->created_at)->locale('id')->translatedFormat('d F Y') }}
+                                </td>
                                 <td class="px-4 py-4 text-sm font-medium text-gray-900">
                                     {{ $report->user->name ?? 'User Terhapus' }}</td>
                                 <td class="px-4 py-4 text-sm text-gray-700">
