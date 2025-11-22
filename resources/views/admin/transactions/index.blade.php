@@ -100,17 +100,17 @@
                         </select>
                     </div>
 
-                    <div class="md:col-span-1">
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tampil</label>
                         <select name="per_page" x-ref="perPageSelect">
                             @foreach ($perPageOptions as $option)
-                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }}
+                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }} data
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="md:col-span-2 flex items-end">
+                    <div class="md:col-span-1 flex items-end">
                         <a href="{{ route('admin.transactions.index') }}"
                             class="w-full h-10 px-5 py-5.5 flex items-center justify-center bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
                             Reset
@@ -264,12 +264,12 @@
                     </div>
 
                     <div>
-                        <h4 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">Rincian Produk</h4>
+                        <h4 class="text-sm font-bold text-gray-700 mb-3 border-b border-gray-300 pb-2">Rincian Produk</h4>
                         <div class="space-y-3">
                             <template x-for="item in modalOrder?.details" :key="item.id">
                                 <div class="flex justify-between items-center border-b border-gray-100 pb-2 last:border-0">
                                     <div class="flex items-center">
-                                        <div class="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden border">
+                                        <div class="w-15 h-15 bg-gray-200 rounded mr-3 overflow-hidden border border-gray-100 shadow-sm">
                                             <img src="https://placehold.co/100x100/e0e0e0/757575?text=IMG"
                                                 class="w-full h-full object-cover">
                                         </div>

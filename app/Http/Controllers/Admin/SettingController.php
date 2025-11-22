@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class SettingController extends Controller
 {
@@ -17,60 +18,79 @@ class SettingController extends Controller
 
     public function update(Request $request)
     {
-        // Ambil data setting yang ada
+        // Ambil data setting yang ada di DB
         $setting = Setting::first();
+
+        // Jika belum ada, buat baru
         if (!$setting) {
-            $setting = new Setting(); // Handle safety jika kosong
+            $setting = new Setting();
         }
 
-        // Validasi Input
+        // 1. Validasi Input
         $data = $request->validate([
             'site_name' => 'required|string|max:50',
             'site_tagline' => 'nullable|string|max:150',
             'site_description' => 'nullable|string|max:500',
-            
+
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string|max:20',
             'contact_address' => 'nullable|string',
-            
+
             'link_facebook' => 'nullable|url',
             'link_instagram' => 'nullable|url',
             'link_twitter' => 'nullable|url',
-            
-            'site_logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048', // Max 2MB
-            'site_favicon' => 'nullable|image|mimes:png,ico|max:1024', // Max 1MB
+
+            'site_logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'site_favicon' => 'nullable|image|mimes:png,ico|max:1024',
         ]);
 
-        // --- Logic Upload Logo ---
+        // ▼▼▼ PERUBAHAN DISINI: Langsung di folder 'settings' dalam public ▼▼▼
+        $uploadPath = public_path('settings');
+
+        // Pastikan folder 'public/settings' ada
+        if (!File::exists($uploadPath)) {
+            File::makeDirectory($uploadPath, 0755, true);
+        }
+
+        // --- 2. Logic Upload Logo ---
         if ($request->hasFile('site_logo')) {
-            // Hapus logo lama jika ada dan file-nya eksis
-            if ($setting->site_logo && file_exists(public_path($setting->site_logo))) {
-                unlink(public_path($setting->site_logo));
+            // Hapus file lama jika ada
+            if ($setting->site_logo && File::exists(public_path($setting->site_logo))) {
+                File::delete(public_path($setting->site_logo));
             }
-            
+
             $file = $request->file('site_logo');
-            $name = 'logo-' . time() . '.' . $file->getClientOriginalExtension();
-            // Simpan di folder public/uploads/settings
-            $file->move(public_path('uploads/settings'), $name);
-            $data['site_logo'] = 'uploads/settings/' . $name;
+            $filename = 'logo-' . time() . '.' . $file->getClientOriginalExtension();
+
+            // Pindahkan file ke public/settings
+            $file->move($uploadPath, $filename);
+
+            // Simpan path relatif ke database
+            $data['site_logo'] = 'settings/' . $filename;
         }
 
-        // --- Logic Upload Favicon ---
+        // --- 3. Logic Upload Favicon ---
         if ($request->hasFile('site_favicon')) {
-            if ($setting->site_favicon && file_exists(public_path($setting->site_favicon))) {
-                unlink(public_path($setting->site_favicon));
+            // Hapus file lama jika ada
+            if ($setting->site_favicon && File::exists(public_path($setting->site_favicon))) {
+                File::delete(public_path($setting->site_favicon));
             }
-            
-            $file = $request->file('site_favicon');
-            $name = 'favicon-' . time() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('uploads/settings'), $name);
-            $data['site_favicon'] = 'uploads/settings/' . $name;
-        }
 
-        // Simpan ke Database
+            $file = $request->file('site_favicon');
+            $filename = 'favicon-' . time() . '.' . $file->getClientOriginalExtension();
+
+            // Pindahkan file
+            $file->move($uploadPath, $filename);
+
+            // Simpan path relatif
+            $data['site_favicon'] = 'settings/' . $filename;
+        }
+        // ▲▲▲ ------------------------------------------------------- ▲▲▲
+
+        // 4. Simpan Perubahan
         $setting->fill($data);
         $setting->save();
 
-        return back()->with('success', 'Pengaturan website berhasil diperbarui.');
+        return back()->with('success', 'Identitas website berhasil diperbarui.');
     }
 }

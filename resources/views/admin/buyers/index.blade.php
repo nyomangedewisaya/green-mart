@@ -85,7 +85,7 @@
                         </div>
                     </div>
 
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status Akun</label>
                         <select name="status" x-ref="statusSelect">
                             <option value="">Semua Status</option>
@@ -99,14 +99,13 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tampil</label>
                         <select name="per_page" x-ref="perPageSelect" x-cloak">
                             @foreach ($perPageOptions as $option)
-                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }} per
-                                    halaman
+                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }} data
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="md:col-span-2 flex items-end">
+                    <div class="md:col-span-1 flex items-end">
                         <a href="{{ route('admin.buyers.index') }}"
                             class="w-full h-10 px-5 py-5.5 flex items-center justify-center bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
                             Reset

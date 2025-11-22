@@ -18,10 +18,6 @@
 @php
     $r = request();
     $isDashboard = $r->routeIs('admin.dashboard');
-    $isMasterData =
-        $r->routeIs('admin.categories.*') || $r->routeIs('admin.products.*') || $r->routeIs('admin.promotions.*');
-    $isUserManagement =
-        $r->routeIs('admin.buyers.*') || $r->routeIs('admin.sellers.*') || $r->routeIs('admin.verification.*');
     $isLaporan = $r->routeIs('admin.reports.*');
     $isNotifikasi = $r->routeIs('admin.notifications.*');
     $isCategory = $r->routeIs('admin.categories.*');
@@ -31,13 +27,18 @@
     $isSellerData = $r->routeIs('admin.sellers.*');
     $isBuyerData = $r->routeIs('admin.buyers.*');
     $isTransaction = $r->routeIs('admin.transactions.*');
+    $isWithdrawal = $r->routeIs('admin.withdrawals.*');
+    $isMasterData = $isCategory || $isProduct || $isPromotion;
+    $isUserManagement = $isBuyerData || $isSellerData || $isVerification;
+    $isFinanceGroup = $isTransaction || $isWithdrawal;
 @endphp
 
 <body class="flex h-screen bg-gray-50" x-data="{
     sidebarOpen: false,
     logoutModal: false,
     masterDataOpen: @json($isMasterData),
-    userManagementOpen: @json($isUserManagement)
+    userManagementOpen: @json($isUserManagement),
+    financeOpen: @json($isFinanceGroup)
 }">
 
     @include('partials.notification')
@@ -210,6 +211,46 @@
                 </li>
 
                 <li>
+                    <button @click="financeOpen = !financeOpen" 
+                            class="flex items-center justify-between w-full px-4 py-2.5 text-sm text-left rounded-lg transition-colors group
+                            {{ $isFinanceGroup ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium' }}">
+                        <span class="flex items-center">
+                            <svg class="w-5 h-5 mr-3 transition-colors {{ $isFinanceGroup ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0zM4 9a1 1 0 100-2 1 1 0 000 2zm13-1a1 1 0 11-2 0 1 1 0 012 0zM1.75 14.5a.75.75 0 000 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 00-1.5 0v.784a.272.272 0 01-.35.25A49.043 49.043 0 001.75 14.5z" clip-rule="evenodd" />
+                            </svg>
+                            Keuangan & Transaksi
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': financeOpen }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                    </button>
+                    
+                    <ul x-show="financeOpen" x-collapse {{ $isFinanceGroup ? 'style=display:block' : 'x-cloak' }} class="mt-1 space-y-1 list-none">
+                        
+                        <li>
+                            <a href="{{ route('admin.transactions.index') }}" 
+                            class="flex items-center pl-11 pr-4 py-2 text-sm rounded-lg group
+                            {{ $isTransaction ? 'text-green-700 font-medium bg-green-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            <svg class="w-4 h-4 mr-3 transition-colors {{ $isTransaction ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0 1 1 0 002 0zM7 6a1 1 0 011-1h3a1 1 0 011 1v1a1 1 0 01-1 1H8a1 1 0 01-1-1V6zm0 4a1 1 0 011-1h6a1 1 0 110 2H8a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            Monitoring Transaksi
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('admin.withdrawals.index') }}" 
+                            class="flex items-center pl-11 pr-4 py-2 text-sm rounded-lg group
+                            {{ $isWithdrawal ? 'text-green-700 font-medium bg-green-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50' }}">
+                            <svg class="w-4 h-4 mr-3 transition-colors {{ $isWithdrawal ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                            </svg>
+                            Pencairan Dana
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li>
                     <a href="{{ route('admin.reports.index') }}"
                         class="flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors group
                    {{ $isLaporan ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium' }}">
@@ -234,34 +275,6 @@
                                 clip-rule="evenodd" />
                         </svg>
                         Notifikasi
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ route('admin.transactions.index') }}"
-                        class="flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors group
-                        {{ $isTransaction ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium' }}">
-                        <svg class="w-5 h-5 mr-3 transition-colors {{ $isTransaction ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}"
-                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0zM4 9a1 1 0 100-2 1 1 0 000 2zm13-1a1 1 0 11-2 0 1 1 0 012 0zM1.75 14.5a.75.75 0 000 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 00-1.5 0v.784a.272.272 0 01-.35.25A49.043 49.043 0 001.75 14.5z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        Monitoring Transaksi
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ route('admin.withdrawals.index') }}"
-                        class="flex items-center px-4 py-2.5 text-sm rounded-lg transition-colors group
-                        {{ $isTransaction ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium' }}">
-                        <svg class="w-5 h-5 mr-3 transition-colors {{ $isTransaction ? 'text-green-600' : 'text-gray-400 group-hover:text-gray-500' }}"
-                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0zM4 9a1 1 0 100-2 1 1 0 000 2zm13-1a1 1 0 11-2 0 1 1 0 012 0zM1.75 14.5a.75.75 0 000 1.5c4.417 0 8.693.603 12.749 1.73 1.111.309 2.251-.512 2.251-1.696v-.784a.75.75 0 00-1.5 0v.784a.272.272 0 01-.35.25A49.043 49.043 0 001.75 14.5z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        Manajemen Keuangan
                     </a>
                 </li>
 

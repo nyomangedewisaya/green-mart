@@ -91,7 +91,7 @@
                         <select name="per_page" x-ref="perPageSelect" class="w-full" x-cloak>
                             @foreach ($perPageOptions as $option)
                                 <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>
-                                    {{ $option }} per halaman
+                                    {{ $option }} data
                                 </option>
                             @endforeach
                         </select>

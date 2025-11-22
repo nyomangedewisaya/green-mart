@@ -122,11 +122,20 @@
                     <tbody class="divide-y divide-gray-200">
                         @forelse($reports as $report)
                             @php
+                                $reasonMap = [
+                                    'fake' => 'Barang Palsu',
+                                    'mismatch' => 'Tidak Sesuai',
+                                    'scam' => 'Penipuan',
+                                    'others' => 'Lainnya',
+                                ];
+
+                                $reasonIndo = $reasonMap[$report->reason] ?? ucfirst($report->reason);
                                 $targetName = $report->product
                                     ? $report->product->name
                                     : ($report->seller
                                         ? $report->seller->name
                                         : 'Unknown');
+
                                 $targetType = $report->product ? 'Produk' : 'Toko';
                                 $targetImage = $report->product
                                     ? $report->product->image
@@ -144,7 +153,7 @@
                                 $reportData = [
                                     'id' => $report->id,
                                     'status' => $report->status,
-                                    'reason' => ucfirst($report->reason),
+                                    'reason' => $reasonIndo,
                                     'description' => $report->description,
                                     'created_at_formatted' => $report->created_at->format('d M Y'),
                                     'user_name' => $report->user->name ?? 'User Terhapus',
@@ -156,10 +165,8 @@
                                 ];
                             @endphp
 
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-4 text-sm text-gray-600">
-                                    {{ \Carbon\Carbon::parse($report->created_at)->locale('id')->translatedFormat('d F Y') }}
-                                </td>
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-4 py-4 text-sm text-gray-600">{{ $report->created_at->format('d M Y') }}</td>
                                 <td class="px-4 py-4 text-sm font-medium text-gray-900">
                                     {{ $report->user->name ?? 'User Terhapus' }}</td>
                                 <td class="px-4 py-4 text-sm text-gray-700">
@@ -180,27 +187,29 @@
                                         <span class="text-gray-400 italic">Terhapus</span>
                                     @endif
                                 </td>
+
                                 <td class="px-4 py-4 text-sm">
                                     <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                                        {{ ucfirst($report->reason) }}
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">
+                                        {{ $reasonIndo }}
                                     </span>
                                 </td>
+
                                 <td class="px-4 py-4 text-sm">
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                            {{ $report->status == 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                            {{ $report->status == 'resolved' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $report->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                                        {{ ucfirst($report->status) }}
+                                        {{ $report->status == 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                        {{ $report->status == 'resolved' ? 'bg-green-100 text-green-800' : '' }}
+                                        {{ $report->status == 'rejected' ? 'bg-red-100 text-red-800' : '' }}">
+                                        {{ $report->status == 'pending' ? 'Menunggu' : ($report->status == 'resolved' ? 'Selesai' : 'Ditolak') }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 text-sm">
                                     <button
                                         @click="
-                                detailModal = true; 
-                                modalReport = {{ json_encode($reportData) }};
-                            "
+                                            detailModal = true; 
+                                            modalReport = {{ json_encode($reportData) }};
+                                        "
                                         class="text-blue-600 hover:text-blue-800 font-medium flex items-center transition">
                                         <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -226,9 +235,11 @@
                                                 </svg>
                                             </div>
                                             <h3 class="text-lg font-semibold text-gray-900">Laporan Tidak Ditemukan</h3>
-                                            <p class="text-sm text-gray-500 max-w-xs mt-1">
-                                                Tidak ada laporan yang cocok dengan filter atau kata kunci pencarian Anda.
-                                            </p>
+                                            <p class="text-sm text-gray-500 max-w-xs mt-1">Tidak ada laporan yang cocok
+                                                dengan filter pencarian.</p>
+                                            <a href="{{ route('admin.reports.index') }}"
+                                                class="mt-3 text-sm font-medium text-blue-600 hover:underline">Reset
+                                                Filter</a>
                                         @else
                                             <div class="bg-green-50 rounded-full p-4 mb-4">
                                                 <svg class="w-12 h-12 text-green-500" xmlns="http://www.w3.org/2000/svg"
@@ -238,10 +249,9 @@
                                                         d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
                                                 </svg>
                                             </div>
-                                            <h3 class="text-lg font-semibold text-gray-900">Semua Aman Terkendali!</h3>
-                                            <p class="text-sm text-gray-500 max-w-xs mt-1">
-                                                Tidak ada laporan masalah atau pelanggaran dari pengguna saat ini.
-                                            </p>
+                                            <h3 class="text-lg font-semibold text-gray-900">Semua Aman!</h3>
+                                            <p class="text-sm text-gray-500 max-w-xs mt-1">Belum ada laporan pelanggaran
+                                                yang masuk.</p>
                                         @endif
                                     </div>
                                 </td>
@@ -253,7 +263,8 @@
             <div class="mt-4">{{ $reports->links() }}</div>
         </div>
 
-        <div x-show="detailModal" class="fixed inset-0 z-99 flex items-center justify-center p-4" style="display: none;">
+        <div x-show="detailModal" class="fixed inset-0 z-100 flex items-center justify-center p-4"
+            style="display: none;">
             <div x-show="detailModal" @click="detailModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
@@ -265,9 +276,9 @@
                 x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
 
-                <div class="bg-gray-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="text-lg font-bold text-gray-800">Detail Laporan</h3>
-                    <button @click="detailModal = false" class="text-gray-400 hover:text-gray-600"><svg class="w-5 h-5"
+                <div class="bg-green-600 px-6 py-4 flex justify-between items-center text-white">
+                    <h3 class="text-lg font-bold">Detail Laporan</h3>
+                    <button @click="detailModal = false" class="text-green-100 hover:text-white"><svg class="w-6 h-6"
                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -293,7 +304,7 @@
                         <div
                             class="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300 transition group">
                             <img :src="getImageUrl(modalReport?.target_image)"
-                                class="w-12 h-12 rounded-md object-cover border mr-3 bg-gray-100">
+                                class="w-15 h-15 rounded-md object-cover border border-gray-100 shadow-sm mr-3 bg-gray-100">
 
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center">

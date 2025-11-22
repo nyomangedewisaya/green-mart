@@ -107,8 +107,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tampil</label>
                         <select name="per_page" x-ref="perPageSelect" x-cloak>
                             @foreach ($perPageOptions as $option)
-                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }} per
-                                    halaman
+                                <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>{{ $option }} data
                                 </option>
                             @endforeach
                         </select>

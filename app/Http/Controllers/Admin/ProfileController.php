@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File; 
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
@@ -22,34 +22,36 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validasi Umum
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-        // 2. Update Data Dasar
         $user->name = $request->name;
         $user->email = $request->email;
 
-        // 3. Update Avatar (Jika ada)
         if ($request->hasFile('avatar')) {
-            // Hapus avatar lama jika bukan default/link luar
-            if ($user->avatar && !str_starts_with($user->avatar, 'http') && file_exists(public_path('storage/' . $user->avatar))) {
-                unlink(public_path('storage/' . $user->avatar));
+            $uploadPath = public_path('avatars');
+
+            if (!File::exists($uploadPath)) {
+                File::makeDirectory($uploadPath, 0755, true);
             }
 
-            // Simpan baru
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $path;
+            if ($user->avatar && !str_starts_with($user->avatar, 'http') && File::exists(public_path($user->avatar))) {
+                File::delete(public_path($user->avatar));
+            }
+
+            $file = $request->file('avatar');
+            $filename = 'avatar-' . $user->id . '-' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($uploadPath, $filename);
+            $user->avatar = 'avatars/' . $filename;
         }
 
-        // 4. Update Password (Jika diisi)
         if ($request->filled('current_password') || $request->filled('password')) {
             $request->validate([
-                'current_password' => 'required|current_password', // Cek password lama benar/salah
-                'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()], // Password baru minimal 8 karakter, ada huruf & angka
+                'current_password' => 'required|current_password',
+                'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
             ]);
 
             $user->password = Hash::make($request->password);

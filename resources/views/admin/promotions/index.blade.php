@@ -7,10 +7,13 @@
         deleteModal: false,
         detailModal: false,
         statusModal: false,
-        editForm: {},
+    
+        modalSeller: null,
         detailPromo: null,
+        editForm: {},
         statusForm: { title: '', action: '' },
         deleteForm: { title: '' },
+    
         editAction: '',
         deleteAction: '',
         imagePreview: null,
@@ -18,12 +21,9 @@
     
         formatCurrency(value) {
             if (isNaN(value)) return 'Rp 0';
-            return new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0
-            }).format(value);
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
         },
+    
         formatDate(dateString) {
             if (!dateString) return 'N/A';
             return new Date(dateString).toLocaleDateString('id-ID', {
@@ -36,62 +36,82 @@
         formatDateForInput(dateString) {
             if (!dateString) return '';
             return dateString.split('T')[0];
+        },
+    
+        getImageUrl(path) {
+            if (!path) return 'https://placehold.co/100x100/e0e0e0/757575?text=No+Image';
+            if (path.startsWith('http')) return path;
+            return '{{ asset('') }}' + path;
+        },
+    
+        previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.imagePreview = URL.createObjectURL(file);
+            }
+        },
+    
+        openCreateModal() {
+            this.createModal = true;
+            this.imagePreview = null;
+            const form = document.getElementById('formCreate');
+            if (form) form.reset();
+        },
+    
+        openEditModal(promo, url) {
+            this.editModal = true;
+            this.editForm = promo;
+            this.editAction = url;
+            this.imagePreview = this.getImageUrl(promo.image);
         }
     }" x-init="$nextTick(() => {
-        new TomSelect($refs.filterSellerSelect, {
-            create: false,
-            placeholder: 'Pilih Seller',
-            onChange: () => { $refs.filterForm.submit(); }
+        new TomSelect($refs.filterSellerSelect, { create: false, placeholder: 'Pilih Seller', onChange: () => $refs.filterForm.submit() });
+        new TomSelect($refs.filterStatusSelect, { create: false, placeholder: 'Pilih Status', onChange: () => $refs.filterForm.submit() });
+        new TomSelect($refs.perPageSelect, { create: false, controlInput: null, onChange: () => $refs.filterForm.submit() });
+    
+        $watch('createModal', (value) => {
+            if (value) {
+                $nextTick(() => {
+                    if (!this._ts_create_seller) {
+                        this._ts_create_seller = new TomSelect($refs.createSellerSelect, { create: false, placeholder: 'Pilih Seller...' });
+                    } else {
+                        this._ts_create_seller.clear(); 
+                    }
+    
+                    if (!this._ts_create_status) {
+                        this._ts_create_status = new TomSelect($refs.createStatusSelect, { create: false, controlInput: null });
+                    } else {
+                        this._ts_create_status.setValue('pending');  
+                    }
+                });
+            }
         });
     
-        new TomSelect($refs.filterStatusSelect, {
-            create: false,
-            placeholder: 'Pilih Status',
-            onChange: () => { $refs.filterForm.submit(); }
+        $watch('editModal', (value) => {
+            if (value) {
+                $nextTick(() => {
+                    if (!this._ts_edit_seller) {
+                        this._ts_edit_seller = new TomSelect($refs.editSellerSelect, { create: false, placeholder: 'Pilih Seller...' });
+                    } else {
+                        this._ts_edit_seller.setValue(this.editForm.seller_id); 
+                    }
+    
+                    if (!this._ts_edit_status) {
+                        this._ts_edit_status = new TomSelect($refs.editStatusSelect, { create: false, controlInput: null });
+                    }
+                    else {
+                        this._ts_edit_status.setValue(this.editForm.status);
+                    }
+                });
+            }
         });
-    
-        new TomSelect($refs.perPageSelect, {
-            create: false,
-            controlInput: null,
-            onChange: () => { $refs.filterForm.submit(); }
-        });
-    });
-    
-    $watch('createModal', (value) => {
-        if (value) {
-            $nextTick(() => {
-                new TomSelect($refs.createSellerSelect, {
-                    create: false,
-                    placeholder: 'Pilih Seller...'
-                });
-                new TomSelect($refs.createStatusSelect, {
-                    create: false,
-                    placeholder: 'Pilih Status...'
-                });
-            });
-        }
-    });
-    
-    $watch('editModal', (value) => {
-        if (value) {
-            $nextTick(() => {
-                new TomSelect($refs.editSellerSelect, {
-                    create: false,
-                    placeholder: 'Pilih Seller...'
-                });
-                new TomSelect($refs.editStatusSelect, {
-                    create: false,
-                    placeholder: 'Pilih Status...'
-                });
-            });
-        }
     });">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
                 <h1 class="text-3xl font-semibold text-gray-800">Manajemen Promosi</h1>
                 <p class="text-gray-500 mt-1">Kelola banner iklan dan slot promosi dari seller.</p>
             </div>
-            <button @click="createModal = true; clearPreview();"
+            <button @click="openCreateModal()"
                 class="mt-4 sm:mt-0 flex items-center justify-center px-5 py-2.5 bg-green-600 text-white font-medium rounded-lg shadow-md hover:bg-green-700 transition transform hover:-translate-y-0.5">
                 <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd"
@@ -164,7 +184,7 @@
                         <select name="per_page" x-ref="perPageSelect" class="w-full" x-cloak>
                             @foreach ($perPageOptions as $option)
                                 <option value="{{ $option }}" @selected(request('per_page', 10) == $option)>
-                                    {{ $option }} per halaman
+                                    {{ $option }} data
                                 </option>
                             @endforeach
                         </select>
@@ -288,12 +308,7 @@
                                 </td>
                                 <td class="px-4 py-4 text-sm font-medium space-x-2">
                                     <button
-                                        @click="
-                                        editModal = true;
-                                        editForm = {{ $promo->toJson() }};
-                                        editAction = '{{ route('admin.promotions.update', $promo) }}';
-                                        imagePreview = '{{ $promo->image ? asset($promo->image) : 'https://placehold.co/128x80/e0e0e0/757575?text=16:9' }}';
-                                    "
+                                        @click="openEditModal({{ $promo->toJson() }}, '{{ route('admin.promotions.update', $promo) }}')"
                                         class="text-blue-600 hover:text-blue-800 transition transform hover:-translate-y-0.5"
                                         title="Edit">
                                         <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
@@ -395,7 +410,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Banner Promosi (Wajib)</label>
                             <div class="mt-1 flex items-center space-x-4">
                                 <img :src="imagePreview || 'https://placehold.co/128x80/e0e0e0/757575?text=16:9'"
-                                    alt="Image Preview" class="w-32 h-20 rounded-lg object-cover bg-gray-100 shadow-sm">
+                                    class="w-32 h-20 rounded-lg object-cover bg-gray-100 shadow-sm">
+
                                 <input type="file" name="image" @change="previewImage" accept="image/*"
                                     class="block w-full text-sm text-gray-500
                                 file:mr-4 file:py-2 file:px-4
@@ -518,8 +534,9 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Banner Promosi (Ganti jika
                                 perlu)</label>
                             <div class="mt-1 flex items-center space-x-4">
-                                <img :src="imagePreview" alt="Image Preview"
+                                <img :src="imagePreview || 'https://placehold.co/128x80/e0e0e0/757575?text=16:9'"
                                     class="w-32 h-20 rounded-lg object-cover bg-gray-100 shadow-sm">
+
                                 <input type="file" name="image" @change="previewImage" accept="image/*"
                                     class="block w-full text-sm text-gray-500
                                 file:mr-4 file:py-2 file:px-4
