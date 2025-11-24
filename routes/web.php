@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
+use App\Http\Controllers\Seller\StatusController;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/', [HomeController::class, 'landingPage'])->name('landing');
@@ -41,7 +43,7 @@ Route::prefix('auth')->name('auth.')->group(function () {
     
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
@@ -66,6 +68,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 });
+
+Route::prefix('seller')->name('seller.')->middleware(['auth', 'role:seller'])->group(function () {
+    Route::get('/status', [StatusController::class, 'index'])->name('status');
+    Route::middleware(['seller.verified'])->group(function () {
+        Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
+    });
+
+});
+
 Route::get('/chat/search-user', [ChatController::class, 'searchNewUser'])->name('chats.search_user'); 
 
 // Route::middleware(['auth', 'seller.approved'])->group(function () {

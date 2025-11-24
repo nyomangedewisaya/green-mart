@@ -47,6 +47,7 @@ class SellerController extends Controller
         if ($request->input('action') === 'toggle_status') {
             $newState = !$seller->is_verified;            
             $seller->update(['is_verified' => $newState]);
+            $seller->user->update(['status' => $newState ? 'active' : 'suspended']);
             $msg = $newState ? 'diaktifkan (Verified)' : 'dinonaktifkan (Unverified)';
             return back()->with('success', "Status toko berhasil $msg.");
         }

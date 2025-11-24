@@ -10,10 +10,8 @@ class VerificationController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil hanya yang is_verified = 0
         $query = Seller::with('user')->where('is_verified', 0);
 
-        // Filter Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -25,7 +23,6 @@ class VerificationController extends Controller
             });
         }
 
-        // Filter Per Page
         $perPageOptions = [10, 25, 50, 100];
         $perPage = $request->input('per_page', 10);
         if (!in_array($perPage, $perPageOptions)) $perPage = 10;
@@ -35,15 +32,10 @@ class VerificationController extends Controller
         return view('admin.verification.index', compact('sellers', 'perPageOptions'));
     }
 
-    /**
-     * Menyetujui Seller (Approve).
-     */
     public function approve(Seller $seller)
     {
-        // Ubah jadi verified
         $seller->update(['is_verified' => 1]);
-
-        // Opsional: Kirim email notifikasi ke seller disini
+        $seller->user->update(['status' => 'active']);
 
         return back()->with('success', "Toko {$seller->name} berhasil disetujui dan sekarang Aktif.");
     }

@@ -59,35 +59,22 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
 
-            switch ($user->role) {
-                case 'admin':
-                    return redirect()->intended(route('admin.dashboard'));
-                    break;
-
-                case 'seller':
-                    if ($user->status == 'approved') {
-                        return redirect()->intended(route('seller.dashboard'));
-                    } elseif ($user->status == 'pending') {
-                        return redirect()->route('auth.pending');
-                    } elseif ($user->status == 'suspended') {
-                        return redirect()->route('auth.suspended');
-                    } else {
-                        Auth::logout();
-                        return redirect()->route('auth.login')->withErrors([
-                            'email' => 'Status akun seller Anda tidak valid.'
-                        ]);
-                    }
-                    break;
-
-                case 'buyer':
-                default:
-                    return redirect()->intended(route('home'));
-                    break;
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.dashboard');
             }
+
+            if ($user->role === 'seller') {
+                if ($user->status == 'active' && $user->seller && $user->seller->is_verified) {
+                     return redirect()->route('seller.dashboard');
+                }
+                return redirect()->route('seller.status');
+            }
+
+            return redirect()->route('home');
         }
 
         throw ValidationException::withMessages([
-            'email' => 'Email atau password yang Anda masukkan salah.',
+            'email' => 'Email atau password salah.',
         ]);
     }
 
