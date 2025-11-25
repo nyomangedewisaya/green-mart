@@ -7,15 +7,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        [x-cloak] { display: none !important; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50 h-screen flex overflow-hidden" x-data="{ sidebarOpen: false }">
 
     <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black/50 z-40 lg:hidden" x-transition></div>
 
+    @include('partials.notification')
+    
     <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0"
            :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }">
         
@@ -35,19 +34,19 @@
 
             <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Manajemen Toko</div>
 
-            <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 group transition-colors">
+            <a href="{{ route('seller.products.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg group transition-colors {{ request()->routeIs('seller.products.index') ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 Produk Saya
             </a>
             
-            <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 group transition-colors">
+            <a href="{{ route('seller.orders.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg group transition-colors {{ request()->routeIs('seller.orders.index') ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                 Pesanan Masuk
             </a>
 
             <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Keuangan</div>
 
-            <a href="#" class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 hover:text-gray-900 group transition-colors">
+            <a href="{{ route('seller.finance.index') }}" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg group transition-colors {{ request()->routeIs('seller.finance.index') ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
                 <svg class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Saldo Saya
             </a>
@@ -86,8 +85,15 @@
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
-             @yield('content')
+        <main class="flex-1 p-6 bg-gray-50 relative overflow-y-auto h-screen" x-data="{ showContent: false }"
+            x-init="setTimeout(() => showContent = true, 150)">
+            <div x-show="showContent" style="display: none;"
+                x-transition:enter="transition-all ease-out duration-700"
+                x-transition:enter-start="opacity-0 -translate-y-8" x-transition:enter-end="opacity-100 translate-y-0"
+                class="min-h-full">
+                @yield('content')
+            </div>
+
         </main>
     </div>
 </body>

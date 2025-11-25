@@ -14,73 +14,94 @@ class OrderSeeder extends Seeder
 {
     public function run(): void
     {
+        // 1. Bersihkan data lama agar bersih (Opsional, matikan jika tidak ingin dihapus)
+        // Order::truncate();
+        // OrderDetail::truncate();
+
         $faker = Faker::create('id_ID');
         
-        // Ambil data master
+        // Ambil Buyer dan Seller yang punya produk
         $buyers = User::where('role', 'buyer')->get();
-        // Hanya ambil seller yang punya produk (biar tidak error saat ambil produk nanti)
-        $sellers = Seller::with('products')->has('products')->get(); 
+        $sellers = Seller::with('products')->has('products')->get();
 
         if($buyers->isEmpty() || $sellers->isEmpty()) {
-            $this->command->info('Data Buyer atau Seller (dengan produk) kosong. Seeder dilewati.');
+            $this->command->info('Data Buyer atau Seller kosong. Seeder dilewati.');
             return;
         }
 
-        // Simulasi 20 Sesi Belanja (Checkout)
-        for ($i = 0; $i < 20; $i++) {
+        // Buat 30 Transaksi Dummy
+        for ($i = 0; $i < 30; $i++) {
             $buyer = $buyers->random();
             
-            // ▼▼▼ PERBAIKAN DI SINI ▼▼▼
-            // Hitung jumlah seller yang ada, maksimal ambil 3
-            $takeCount = min($sellers->count(), rand(1, 3));
+            // Satu buyer bisa beli di 1-2 toko sekaligus (Split Order Logic)
+            $shopCount = rand(1, 2);
+            // Pastikan tidak mengambil lebih dari jumlah seller yang ada
+            $shopCount = min($sellers->count(), $shopCount);
             
-            // Ambil seller sejumlah $takeCount
-            $selectedSellers = $sellers->random($takeCount);
-            // ▲▲▲ ----------------- ▲▲▲
+            $selectedSellers = $sellers->random($shopCount);
 
             foreach ($selectedSellers as $seller) {
-                // Double check (meski sudah di-filter di query awal)
-                if ($seller->products->isEmpty()) continue;
-
+                // Status Acak
                 $status = $faker->randomElement(['pending', 'paid', 'shipped', 'completed', 'cancelled']);
                 
+                // Tentukan Data Pengiriman (Hanya jika sudah dikirim/selesai)
+                $courier = null;
+                $resi = null;
+                $receiveDate = null;
+
+                if (in_array($status, ['shipped', 'completed'])) {
+                    $courier = $faker->randomElement(['JNE', 'J&T', 'SiCepat', 'GoSend']);
+                    $resi = 'JP' . strtoupper(Str::random(10)); // Contoh resi
+                }
+
+                if ($status === 'completed') {
+                    $receiveDate = $faker->dateTimeBetween('-1 week', 'now');
+                }
+
+                // Buat Order Header
                 $order = Order::create([
                     'user_id' => $buyer->id,
-                    'seller_id' => $seller->id,
-                    'order_code' => 'INV-' . strtoupper(Str::random(8)),
-                    'total_amount' => 0, // Nanti diupdate
+                    'seller_id' => $seller->id, // Relasi langsung ke Seller
+                    'order_code' => 'INV-' . strtoupper(Str::random(9)), // INV-X7A9B2C1
+                    'total_amount' => 0, // Hitung nanti
                     'status' => $status,
                     'payment_method' => 'Transfer Bank',
                     'address' => $faker->address,
-                    'order_date' => $faker->dateTimeBetween('-1 month', 'now'),
-                    // Tambahkan receive_date jika completed
-                    'receive_date' => $status == 'completed' ? $faker->dateTimeBetween('-1 week', 'now') : null,
+                    'shipping_courier' => $courier,
+                    'shipping_resi' => $resi,
+                    'order_date' => $faker->dateTimeBetween('-2 months', 'now'),
+                    'receive_date' => $receiveDate,
                 ]);
 
-                // ▼▼▼ PERBAIKAN LOGIKA PRODUK JUGA (UNTUK KEAMANAN) ▼▼▼
-                // Ambil maksimal 4 produk, atau sebanyak jumlah produk seller jika kurang dari 4
-                $productCountToTake = min($seller->products->count(), rand(1, 4));
-                $randomProducts = $seller->products->random($productCountToTake);
-                
+                // Isi Produk (Detail Order)
                 $grandTotal = 0;
+                
+                // Ambil 1-3 produk acak dari toko ini
+                $productCountToTake = min($seller->products->count(), rand(1, 3));
+                $randomProducts = $seller->products->random($productCountToTake);
 
                 foreach ($randomProducts as $product) {
-                    $qty = rand(1, 3);
-                    $subtotal = $product->price * $qty;
-                    
+                    $qty = rand(1, 5); // Beli 1-5 pcs
+                    $price = $product->price; // Harga saat beli (snapshot)
+                    $subtotal = $price * $qty;
+
                     OrderDetail::create([
                         'order_id' => $order->id,
                         'product_id' => $product->id,
                         'quantity' => $qty,
-                        'price' => $product->price,
+                        'price' => $price,
                         'subtotal' => $subtotal
                     ]);
 
                     $grandTotal += $subtotal;
                 }
 
-                // Update total + ongkir fiktif (15.000)
-                $order->update(['total_amount' => $grandTotal + 15000]);
+                // Update Total Belanja (+ Ongkir Fiktif 15rb)
+                $finalTotal = $grandTotal + 15000;
+                
+                // Jika statusnya cancelled atau pending, anggap belum bayar/batal bayar
+                // Tapi total_amount tetap dicatat sebagai nilai order
+                $order->update(['total_amount' => $finalTotal]);
             }
         }
     }

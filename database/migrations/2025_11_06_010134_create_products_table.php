@@ -22,7 +22,9 @@ return new class extends Migration
             $table->integer('stock');
             $table->string('image');
             $table->integer('discount')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(0);
+            $table->boolean('is_featured')->default(0);
+            $table->text('admin_notes')->nullable();
             $table->timestamps();
         });
     }

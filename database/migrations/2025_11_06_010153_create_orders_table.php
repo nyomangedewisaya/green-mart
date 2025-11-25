@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -20,6 +19,8 @@ return new class extends Migration
             $table->enum('status', ['pending', 'paid', 'shipped', 'completed', 'cancelled']);
             $table->string('payment_method')->default('transfer');
             $table->text('address');
+            $table->string('shipping_courier')->nullable();
+            $table->string('shipping_resi')->nullable();
             $table->date('order_date')->useCurrent();
             $table->date('receive_date')->nullable();
             $table->timestamps();
