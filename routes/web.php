@@ -19,6 +19,7 @@ use App\Http\Controllers\Seller\DashboardController as SellerDashboardController
 use App\Http\Controllers\Seller\FinanceController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController as SellerProductController;
+use App\Http\Controllers\Seller\PromotionController as SellerPromotionController;
 use App\Http\Controllers\Seller\StatusController;
 use Illuminate\Support\Facades\Route;
 
@@ -87,6 +88,9 @@ Route::prefix('seller')
             Route::resource('orders', OrderController::class)->only(['index', 'update']);
             Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
             Route::post('/finance/withdraw', [FinanceController::class, 'store'])->name('finance.withdraw');
+            Route::post('/finance/bank', [FinanceController::class, 'storeBank'])->name('finance.bank.store');
+            Route::delete('/finance/bank/{id}', [FinanceController::class, 'destroyBank'])->name('finance.bank.destroy');
+            Route::resource('promotions', SellerPromotionController::class)->only(['index', 'store']);
         });
     });
 

@@ -27,16 +27,24 @@ class ProductController extends Controller
 
         if ($request->filled('status')) {
             if ($request->status == 'active') {
-                $query->where('is_active', 1);
+                $query->where('is_active', 1)->whereNull('admin_notes');
             }
             if ($request->status == 'inactive') {
-                $query->where('is_active', 0);
+                $query->where('is_active', 0)->whereNull('admin_notes');
+            }
+            if ($request->status == 'suspended') {
+                $query->whereNotNull('admin_notes');
             }
         }
 
         $perPage = $request->input('per_page', 10);
 
-        $products = $query->latest()->paginate($perPage)->appends($request->query());
+        $products = $query
+            ->withCount('wishlists')
+            ->with(['category', 'reviews.user'])
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
         $categories = Category::all();
 
         return view('seller.products.index', compact('products', 'categories'));
@@ -80,16 +88,27 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        if ($product->seller_id !== Auth::user()->seller->id) abort(403);
+        // 1. Cek Kepemilikan
+        if ($product->seller_id !== Auth::user()->seller->id) {
+            abort(403);
+        }
 
+        // 2. Handle Quick Status Toggle (Dari Modal Status di Tabel)
         if ($request->has('update_type') && $request->update_type == 'status_toggle') {
+            // LOGIKA SUSPEND: Jika ada catatan admin, DILARANG mengaktifkan
+            if ($product->admin_notes && $request->boolean('is_active')) {
+                return back()->with('error', 'Produk sedang disuspend oleh Admin. Perbaiki data terlebih dahulu atau hubungi Admin.');
+            }
+
             $product->update([
-                'is_active' => $request->boolean('is_active')
+                'is_active' => $request->boolean('is_active'),
             ]);
+
             $status = $request->boolean('is_active') ? 'diaktifkan' : 'dinonaktifkan';
             return back()->with('success', "Produk berhasil $status.");
         }
 
+        // 3. Handle Full Edit (Dari Modal Edit)
         $request->validate([
             'name' => 'required|string|max:100',
             'category_id' => 'required|exists:categories,id',
@@ -102,12 +121,23 @@ class ProductController extends Controller
         ]);
 
         $data = $request->except(['image']);
-        
+
+        // Update Slug jika nama berubah
         if ($request->name !== $product->name) {
             $data['slug'] = Str::slug($request->name) . '-' . $product->id;
         }
-        $data['is_active'] = $request->boolean('is_active');
 
+        // LOGIKA SUSPEND DI EDIT:
+        // Jika produk disuspend, paksa status tetap NONAKTIF meskipun seller mencentang "Aktif"
+        if ($product->admin_notes) {
+            $data['is_active'] = 0;
+            // Opsional: Beri flash message khusus
+            session()->flash('error', 'Data diperbarui, namun status tetap Nonaktif karena produk sedang disuspend Admin.');
+        } else {
+            $data['is_active'] = $request->boolean('is_active');
+        }
+
+        // Update Image
         if ($request->hasFile('image')) {
             if ($product->image && File::exists(public_path($product->image))) {
                 File::delete(public_path($product->image));
@@ -125,7 +155,9 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
-        if ($product->seller_id !== Auth::user()->seller->id) abort(403);
+        if ($product->seller_id !== Auth::user()->seller->id) {
+            abort(403);
+        }
 
         if ($product->image && File::exists(public_path($product->image))) {
             File::delete(public_path($product->image));

@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             ChatSeeder::class,
             WithdrawalSeeder::class,
             SettingSeeder::class,
+            CourierSeeder::class,
+            ReviewWishlistSeeder::class,
         ]);
 
         // php artisan db:seed --class=NamaSeeder

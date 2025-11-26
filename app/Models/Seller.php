@@ -42,6 +42,11 @@ class Seller extends Model
         return $this->hasMany(Withdrawal::class);
     }
 
+    public function bankAccounts()
+    {
+        return $this->hasMany(SellerBankAccount::class);
+    }
+
     public function getRouteKeyName()
     {
         return 'slug';

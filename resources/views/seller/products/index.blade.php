@@ -21,6 +21,12 @@
     
         imagePreview: null,
         searchQuery: '{{ request('search', '') }}',
+        showImageError: false,
+    
+        productReviews: [],
+        filteredReviews: [],
+        reviewStats: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0, total: 0, avg: 0 },
+        currentReviewFilter: 'all',
     
         formatCurrency(value) {
             if (isNaN(value)) return 'Rp 0';
@@ -33,10 +39,20 @@
             return '{{ asset('') }}' + path;
         },
     
+    
+        submitCreate() {
+            if (!this.imagePreview) {
+                this.showImageError = true;
+                return;
+            }
+            document.getElementById('formCreate').submit();
+        },
+    
         previewImage(event) {
             const file = event.target.files[0];
             if (file) {
                 this.imagePreview = URL.createObjectURL(file);
+                this.showImageError = false;
             }
         },
     
@@ -47,20 +63,57 @@
             if (form) form.reset();
         },
     
-        openEditModal(product, url) {
-            this.editModal = true;
-            this.editForm = product;
-            this.editAction = url;
-            this.imagePreview = this.getImageUrl(product.image);
+        openDetailModal(product) {
+            this.detailModal = true;
+            this.modalProduct = product;
+            this.modalProduct.category_name = product.category ? product.category.name : '-';
+            this.productReviews = product.reviews || [];
+            this.calculateReviewStats();
+            this.filterReviews('all');
         },
     
         openStatusModal(product, url) {
             this.statusModal = true;
             this.statusForm = {
+                id: product.id,
                 name: product.name,
-                is_active: product.is_active
+                is_active: product.is_active,
+                is_suspended: !!product.admin_notes,
+                admin_note: product.admin_notes
             };
             this.statusAction = url;
+        },
+    
+        openDetailModal(product) {
+            this.detailModal = true;
+            this.modalProduct = product;
+            this.productReviews = product.reviews || [];
+            this.calculateReviewStats();
+            this.filterReviews('all');
+        },
+    
+        calculateReviewStats() {
+            let stats = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0, total: 0, sum: 0, avg: 0 };
+    
+            this.productReviews.forEach(r => {
+                stats[r.rating]++;
+                stats.total++;
+                stats.sum += r.rating;
+            });
+    
+            if (stats.total > 0) {
+                stats.avg = (stats.sum / stats.total).toFixed(1);
+            }
+            this.reviewStats = stats;
+        },
+    
+        filterReviews(star) {
+            this.currentReviewFilter = star;
+            if (star === 'all') {
+                this.filteredReviews = this.productReviews;
+            } else {
+                this.filteredReviews = this.productReviews.filter(r => r.rating == star);
+            }
         }
     
     }" x-init="$nextTick(() => {
@@ -153,11 +206,13 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
                         <select name="status" x-ref="filterStatusSelect">
-                            <option value="">Semua Status</option>
+                            <option value="">Semua</option>
                             <option value="active" @selected(request('status') == 'active')>Aktif</option>
                             <option value="inactive" @selected(request('status') == 'inactive')>Nonaktif</option>
+
+                            <option value="suspended" @selected(request('status') == 'suspended')>Ditangguhkan (Admin)</option>
                         </select>
                     </div>
 
@@ -173,7 +228,7 @@
                         </div>
 
                         <a href="{{ route('seller.products.index') }}"
-                            class="h-[42px] w-[42px] flex-shrink-0 flex items-center justify-center bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-red-600 transition"
+                            class="h-[42px] w-[42px] shrink-0 flex items-center justify-center bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-red-600 transition"
                             title="Reset Filter">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -214,7 +269,7 @@
 
                                 <td class="px-6 py-4">
                                     <div class="flex items-center cursor-pointer"
-                                        @click="detailModal = true; modalProduct = {{ $product->toJson() }}; modalProduct.category_name = '{{ $product->category->name }}';">
+                                        @click="openDetailModal({{ json_encode($product) }})">
                                         <div
                                             class="relative w-12 h-12 rounded-lg overflow-hidden border border-gray-200 mr-4 group-hover:border-green-400 transition shrink-0">
                                             <img :src="getImageUrl('{{ $product->image }}')"
@@ -227,9 +282,23 @@
                                             @endif
                                         </div>
                                         <div>
-                                            <p
-                                                class="font-bold text-gray-900 line-clamp-1 group-hover:text-green-600 transition">
-                                                {{ $product->name }}</p>
+                                            <div>
+                                                <p
+                                                    class="font-bold text-gray-900 line-clamp-1 group-hover:text-green-600 transition">
+                                                    {{ $product->name }}</p>
+
+                                                @if ($product->admin_notes)
+                                                    <p class="text-[10px] text-red-600 font-bold flex items-center mt-0.5">
+                                                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24"
+                                                            stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                        </svg>
+                                                        Disuspend Admin
+                                                    </p>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
@@ -254,13 +323,27 @@
 
                                 <td class="px-6 py-4 text-center">
                                     <button type="button"
-                                        @click="openStatusModal({{ $product->toJson() }}, '{{ route('seller.products.update', $product) }}')"
+                                        @click="openStatusModal({{ $product->toJson() }}, '{{ route('seller.products.update', $product->slug) }}')"
                                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition transform active:scale-95 hover:shadow-sm
-                            {{ $product->is_active ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' }}"
-                                        title="Klik untuk ubah status">
-                                        <span
-                                            class="w-1.5 h-1.5 rounded-full mr-1.5 {{ $product->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
-                                        {{ $product->is_active ? 'Aktif' : 'Nonaktif' }}
+                                        {{ $product->admin_notes
+                                            ? 'bg-red-100 text-red-700 border-red-200 cursor-not-allowed opacity-75'
+                                            : ($product->is_active
+                                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                                : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200') }}"
+                                        title="{{ $product->admin_notes ? 'Produk ditangguhkan' : 'Klik untuk ubah status' }}">
+
+                                        @if ($product->admin_notes)
+                                            <svg class="w-3 h-3 mr-1.5" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                            </svg>
+                                            Ditangguhkan
+                                        @else
+                                            <span
+                                                class="w-1.5 h-1.5 rounded-full mr-1.5 {{ $product->is_active ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                                            {{ $product->is_active ? 'Aktif' : 'Nonaktif' }}
+                                        @endif
                                     </button>
                                 </td>
 
@@ -350,61 +433,160 @@
                 x-transition:leave-end="opacity-0 scale-95 translate-y-4">
 
                 <button @click="detailModal = false"
-                    class="absolute top-3 right-3 bg-black/50 text-white p-1 rounded-full md:hidden z-20"><svg
-                        class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="absolute top-4 right-4 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition backdrop-blur-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg></button>
+                    </svg>
+                </button>
 
-                <div class="w-full md:w-1/2 h-64 md:h-auto bg-gray-100 relative">
-                    <img :src="getImageUrl(modalProduct?.image)" class="w-full h-full object-cover">
+                <div class="flex flex-col md:flex-row h-full">
 
-                    <div x-show="modalProduct?.discount > 0"
-                        class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-lg">
-                        <span x-text="modalProduct?.discount"></span>% OFF
-                    </div>
-                </div>
+                    <div
+                        class="w-full md:w-5/12 bg-gray-50 border-r border-gray-200 overflow-y-auto custom-scroll relative">
+                        <div class="relative aspect-square w-full">
+                            <img :src="getImageUrl(modalProduct?.image)" class="w-full h-full object-cover">
 
-                <div class="w-full md:w-1/2 p-8 flex flex-col">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1"
-                                x-text="modalProduct?.category_name"></p>
-                            <h2 class="text-2xl font-bold text-gray-900 leading-tight" x-text="modalProduct?.name"></h2>
-                        </div>
-                        <button @click="detailModal = false"
-                            class="hidden md:block text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
-                            </svg></button>
-                    </div>
-
-                    <div class="mt-6 space-y-4 flex-1">
-                        <div>
-                            <p class="text-3xl font-bold text-green-600 tracking-tight"
-                                x-text="formatCurrency(modalProduct?.price)"></p>
-                            <p class="text-sm text-gray-500 mt-1" x-show="modalProduct?.stock > 0">Stok tersedia: <span
-                                    class="font-bold text-gray-800" x-text="modalProduct?.stock"></span> unit</p>
-                            <p class="text-sm text-red-500 font-bold mt-1" x-show="modalProduct?.stock <= 0">Stok Habis
-                            </p>
+                            <div
+                                class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 border border-gray-100">
+                                <svg class="w-5 h-5 text-red-500 fill-current" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                </svg>
+                                <span class="font-bold text-gray-800 text-sm"><span
+                                        x-text="modalProduct?.wishlists_count || 0"></span> Peminat</span>
+                            </div>
                         </div>
 
-                        <div class="pt-4 border-t border-gray-100">
-                            <h4 class="text-sm font-bold text-gray-900 mb-2">Deskripsi</h4>
-                            <div class="text-sm text-gray-600 leading-relaxed h-32 overflow-y-auto custom-scroll pr-2">
-                                <p x-text="modalProduct?.description"></p>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <span class="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded uppercase"
+                                    x-text="modalProduct?.category?.name"></span>
+                                <h2 class="text-2xl font-bold text-gray-900 mt-2 leading-tight"
+                                    x-text="modalProduct?.name"></h2>
+                            </div>
+
+                            <div class="flex justify-between items-center border-y border-gray-200 py-4">
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-bold">Harga</p>
+                                    <p class="text-xl font-bold text-gray-900"
+                                        x-text="formatCurrency(modalProduct?.price)"></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500 uppercase font-bold">Stok</p>
+                                    <p class="text-lg font-medium text-gray-900" x-text="modalProduct?.stock"></p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-800 mb-2">Deskripsi</h4>
+                                <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap"
+                                    x-text="modalProduct?.description"></p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase"
-                            :class="modalProduct?.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-                            <span class="w-2 h-2 rounded-full mr-1.5"
-                                :class="modalProduct?.is_active ? 'bg-green-500' : 'bg-red-500'"></span>
-                            <span x-text="modalProduct?.is_active ? 'Publik' : 'Draft'"></span>
-                        </span>
+                    <div class="w-full md:w-7/12 bg-white flex flex-col h-full">
+
+                        <div class="p-6 border-b border-gray-100 bg-white z-10">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                Ulasan Pembeli
+                            </h3>
+
+                            <div class="mt-4 flex items-center gap-6">
+                                <div class="text-center">
+                                    <span class="text-4xl font-bold text-gray-900" x-text="reviewStats.avg"></span>
+                                    <div class="flex text-yellow-400 text-sm justify-center mt-1">★★★★★</div>
+                                    <p class="text-xs text-gray-400 mt-1"><span x-text="reviewStats.total"></span> Ulasan
+                                    </p>
+                                </div>
+                                <div class="flex-1 space-y-1">
+                                    <template x-for="star in [5, 4, 3, 2, 1]">
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="w-3 font-bold text-gray-500" x-text="star"></span>
+                                            <svg class="w-3 h-3 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                                <path
+                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full bg-yellow-400 rounded-full"
+                                                    :style="'width: ' + (reviewStats.total > 0 ? (reviewStats[star] /
+                                                        reviewStats.total * 100) : 0) + '%'">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2 mt-6 overflow-x-auto no-scrollbar pb-1">
+                                <button @click="filterReviews('all')"
+                                    class="px-3 py-1 rounded-full text-xs font-bold border transition"
+                                    :class="currentReviewFilter === 'all' ? 'bg-green-600 text-white border-green-600' :
+                                        'bg-white text-gray-600 border-gray-200 hover:border-green-500'">Semua</button>
+                                <template x-for="star in [5,4,3,2,1]">
+                                    <button @click="filterReviews(star)"
+                                        class="px-3 py-1 rounded-full text-xs font-bold border transition flex items-center whitespace-nowrap"
+                                        :class="currentReviewFilter === star ? 'bg-green-600 text-white border-green-600' :
+                                            'bg-white text-gray-600 border-gray-200 hover:border-green-500'">
+                                        <span x-text="star"></span> <svg class="w-3 h-3 ml-1 mb-0.5" fill="currentColor"
+                                            viewBox="0 0 20 20">
+                                            <path
+                                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-4 bg-gray-50/30">
+                            <template x-for="review in filteredReviews" :key="review.id">
+                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                                                <img x-show="getUserAvatar(review.user?.avatar)"
+                                                    :src="getUserAvatar(review.user?.avatar)"
+                                                    class="w-full h-full object-cover">
+                                                <span x-show="!getUserAvatar(review.user?.avatar)"
+                                                    x-text="review.user?.name?.substring(0,1) || 'U'"></span>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-bold text-gray-900"
+                                                    x-text="review.user?.name || 'Pengguna'"></p>
+                                                <p class="text-[10px] text-gray-400"
+                                                    x-text="formatDate(review.created_at)"></p>
+                                            </div>
+                                        </div>
+                                        <div class="flex text-yellow-400 text-xs">
+                                            <template x-for="i in 5">
+                                                <svg class="w-3 h-3"
+                                                    :class="i <= review.rating ? 'text-yellow-400' : 'text-gray-200'"
+                                                    fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-600 leading-relaxed" x-text="review.comment"></p>
+                                </div>
+                            </template>
+                            <div x-show="filteredReviews.length === 0" class="text-center py-8 text-gray-400">
+                                <p class="text-sm">Belum ada ulasan.</p>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border-t border-gray-200 bg-white text-right">
+                            <button @click="detailModal = false"
+                                class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-bold transition">Tutup</button>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -443,47 +625,49 @@
                     <div class="p-8">
                         <div class="flex flex-col lg:flex-row gap-8">
 
-                            <div class="w-full lg:w-5/12 space-y-4">
-                                <label class="block text-sm font-bold text-gray-700">Foto Utama</label>
+                            <div class="w-full sm:w-1/3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Foto
+                                    Produk <span class="text-red-500">*</span></label>
 
-                                <div class="relative aspect-square w-full bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 hover:border-green-500 transition-colors cursor-pointer group overflow-hidden flex items-center justify-center"
+                                <div class="group relative w-full aspect-square bg-gray-50 rounded-xl border-2 border-dashed transition cursor-pointer flex items-center justify-center overflow-hidden"
+                                    :class="showImageError ? 'border-red-500 bg-red-50' :
+                                        'border-gray-300 hover:border-green-500'"
                                     @click="$refs.createImage.click()">
 
-                                    <img x-show="imagePreview" :src="imagePreview"
-                                        class="absolute inset-0 w-full h-full object-cover z-10">
+                                    <img x-show="imagePreview" :src="imagePreview" class="w-full h-full object-cover">
 
                                     <div x-show="!imagePreview"
-                                        class="text-center p-6 group-hover:scale-105 transition-transform duration-300">
-                                        <div
-                                            class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-3 text-green-600">
-                                            <svg class="w-8 h-8" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                        </div>
-                                        <p class="text-sm font-bold text-gray-600">Upload Foto</p>
-                                        <p class="text-xs text-gray-400 mt-1">JPG/PNG, Max 2MB</p>
-                                    </div>
-
-                                    <div x-show="imagePreview"
-                                        class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-20">
-                                        <span
-                                            class="text-white text-sm font-bold border border-white px-4 py-2 rounded-full">Ganti
-                                            Foto</span>
+                                        class="text-center text-gray-400 group-hover:text-green-500"
+                                        :class="showImageError ? 'text-red-400' : ''">
+                                        <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        <span class="text-xs">Upload</span>
                                     </div>
                                 </div>
-                                <input type="file" name="image" x-ref="createImage" class="hidden"
-                                    accept="image/*" required @change="previewImage">
 
-                                <div class="bg-green-50 p-3 rounded-xl border border-green-100 flex gap-3">
+                                <p x-show="showImageError"
+                                    class="text-[10px] text-red-600 mt-1 font-bold flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Wajib upload foto produk!
+                                </p>
+
+                                <input type="file" name="image" x-ref="createImage" class="hidden"
+                                    accept="image/*" @change="previewImage">
+
+                                <div class="mt-3 bg-green-50 p-3 rounded-xl border border-green-100 flex gap-3">
                                     <svg class="w-5 h-5 text-green-500 shrink-0 mt-0.5" fill="none"
                                         stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <p class="text-xs text-green-700 leading-relaxed">Pastikan foto produk jelas,
-                                        pencahayaan cukup, dan berlatar bersih agar menarik pembeli.</p>
+                                        pencahayaan cukup, dan berlatar bersih.</p>
                                 </div>
                             </div>
 
@@ -579,8 +763,8 @@
                             class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm">
                             Batal
                         </button>
-                        <button type="submit"
-                            class="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200 transform hover:-translate-y-0.5 text-sm">
+                        <button type="button" @click="submitCreate()"
+                            class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 shadow-md">
                             Simpan Produk
                         </button>
                     </div>
@@ -616,6 +800,28 @@
                     class="flex-1 overflow-y-auto custom-scroll">
                     @csrf @method('PUT')
 
+                    <div class="px-8 pt-6 pb-0" x-show="editForm.admin_notes">
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm flex gap-4 items-start">
+                            <div class="p-2 bg-white rounded-full text-red-500 shadow-sm shrink-0">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-red-800 uppercase tracking-wide">Produk Ditangguhkan
+                                    Admin</h4>
+                                <p class="text-sm text-red-700 mt-1">
+                                    Alasan: <span class="font-medium italic bg-red-100 px-1 rounded"
+                                        x-text="editForm.admin_notes"></span>
+                                </p>
+                                <p class="text-xs text-red-600 mt-2 bg-white/60 p-2 rounded border border-red-100">
+                                    Silakan perbaiki data produk (foto, nama, deskripsi) sesuai catatan di atas, lalu
+                                    simpan. Hubungi admin jika perbaikan sudah dilakukan.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="p-8">
                         <div class="flex flex-col lg:flex-row gap-8">
 
@@ -630,14 +836,15 @@
                                     <div
                                         class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-20">
                                         <span
-                                            class="text-white text-sm font-bold border border-white px-4 py-2 rounded-full backdrop-blur-sm">Ganti
+                                            class="text-white text-sm font-bold border border-white px-4 py-2 rounded-full backdrop-blur-sm shadow-lg">Ganti
                                             Foto</span>
                                     </div>
                                 </div>
                                 <input type="file" name="image" x-ref="editImage" class="hidden" accept="image/*"
                                     @change="previewImage">
 
-                                <p class="text-sm text-center font-bold text-gray-800" x-text="editForm.name"></p>
+                                <p class="text-sm text-center font-bold text-gray-800 truncate" x-text="editForm.name">
+                                </p>
 
                                 <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex gap-3">
                                     <svg class="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none"
@@ -646,7 +853,7 @@
                                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <p class="text-xs text-blue-700 leading-relaxed">Pastikan foto produk jelas,
-                                        pencahayaan cukup, dan berlatar bersih agar menarik pembeli.</p>
+                                        pencahayaan cukup, dan berlatar bersih.</p>
                                 </div>
                             </div>
 
@@ -658,7 +865,7 @@
                                             class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nama
                                             Produk</label>
                                         <input type="text" name="name" x-model="editForm.name" required
-                                            class="w-full px-4 py-3 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800">
+                                            class="w-full px-4 py-3 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800 shadow-sm">
                                     </div>
                                     <div>
                                         <label
@@ -682,14 +889,14 @@
                                         <div class="relative">
                                             <span class="absolute left-4 top-2.5 text-gray-400 font-bold text-sm">Rp</span>
                                             <input type="number" name="price" x-model="editForm.price" required
-                                                class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl text-sm transition font-bold text-gray-800">
+                                                class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl text-sm transition font-bold text-gray-800 shadow-sm">
                                         </div>
                                     </div>
                                     <div>
                                         <label
                                             class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Stok</label>
                                         <input type="number" name="stock" x-model="editForm.stock" required
-                                            class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800">
+                                            class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800 shadow-sm">
                                     </div>
                                 </div>
 
@@ -701,22 +908,31 @@
                                         <div class="relative">
                                             <input type="number" name="discount" x-model="editForm.discount"
                                                 min="0" max="100"
-                                                class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800">
+                                                class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl text-sm transition font-medium text-gray-800 shadow-sm">
                                             <span class="absolute right-4 top-2.5 text-gray-400 font-bold text-sm">%</span>
                                         </div>
                                     </div>
+
                                     <div>
                                         <label
                                             class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</label>
-                                        <label class="flex items-center cursor-pointer relative">
+                                        <label class="flex items-center relative transition"
+                                            :class="editForm.admin_notes ? 'cursor-not-allowed opacity-60 grayscale' :
+                                                'cursor-pointer'">
+
                                             <input type="checkbox" name="is_active" value="1"
-                                                :checked="editForm.is_active" class="sr-only peer">
+                                                :checked="editForm.is_active" class="sr-only peer"
+                                                :disabled="editForm.admin_notes">
+
                                             <div
-                                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
                                             </div>
+
                                             <span class="ml-3 text-sm font-medium text-gray-700"
                                                 x-text="editForm.is_active ? 'Aktif' : 'Nonaktif'"></span>
                                         </label>
+                                        <p x-show="editForm.admin_notes"
+                                            class="text-[10px] text-red-500 mt-1 font-bold ml-1">*Status dikunci Admin</p>
                                     </div>
                                 </div>
 
@@ -724,14 +940,15 @@
                                     <label
                                         class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Deskripsi</label>
                                     <textarea name="description" x-model="editForm.description" rows="4" required
-                                        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl text-sm transition resize-none leading-relaxed text-gray-700"></textarea>
+                                        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl text-sm transition resize-none leading-relaxed text-gray-700 shadow-sm"></textarea>
                                 </div>
 
                             </div>
                         </div>
                     </div>
 
-                    <div class="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10">
+                    <div
+                        class="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                         <button type="button" @click="editModal = false"
                             class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm">
                             Batal
@@ -769,7 +986,7 @@
                     </div>
                     <div class="bg-gray-50 px-4 py-3 flex flex-row-reverse gap-2">
                         <button type="submit"
-                            class="w-full inline-flex justify-center rounded-lg border border border-gray-300 shadow-sm px-4 py-2 bg-red-601 text-base font-medium text-white hover:bg-red-700 sm:text-sm">Ya,
+                            class="w-full inline-flex justify-center rounded-lg border border-red-300 shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:text-sm">Ya,
                             Hapus</button>
                         <button type="button" @click="deleteModal = false"
                             class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:text-sm">Batal</button>
@@ -791,51 +1008,59 @@
                 x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
 
-                <form :action="statusAction" method="POST">
-                    @csrf @method('PUT')
+                <div class="p-6 text-center">
 
-                    <input type="hidden" name="is_active" :value="statusForm.is_active ? 0 : 1">
-                    <input type="hidden" name="update_type" value="status_toggle">
+                    <div x-show="statusForm.is_suspended">
+                        <div
+                            class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4 animate-pulse">
+                            <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900">Akses Ditolak</h3>
+                        <p class="text-sm text-gray-500 mt-2 leading-relaxed">
+                            Produk ini sedang <strong>ditangguhkan oleh Admin</strong>. <br>
+                            Alasan: <span class="text-red-600 font-medium" x-text="statusForm.admin_note"></span>
+                        </p>
+                    </div>
 
-                    <div class="p-6 text-center">
+                    <div x-show="!statusForm.is_suspended">
                         <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full mb-4 transition-colors"
                             :class="statusForm.is_active ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'">
-
                             <svg x-show="statusForm.is_active" class="w-8 h-8" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                             </svg>
-
                             <svg x-show="!statusForm.is_active" class="w-8 h-8" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-
                         <h3 class="text-lg font-bold text-gray-900"
                             x-text="statusForm.is_active ? 'Nonaktifkan Produk?' : 'Aktifkan Produk?'"></h3>
                         <p class="text-sm text-gray-500 mt-2">
-                            Anda akan mengubah status produk <strong x-text="statusForm.name"
-                                class="text-gray-800"></strong> menjadi
-                            <span class="font-bold" :class="statusForm.is_active ? 'text-red-600' : 'text-green-600'"
-                                x-text="statusForm.is_active ? 'NONAKTIF' : 'AKTIF'"></span>.
+                            Ubah status menjadi <span class="font-bold"
+                                :class="statusForm.is_active ? 'text-red-600' : 'text-green-600'"
+                                x-text="statusForm.is_active ? 'NONAKTIF' : 'AKTIF'"></span>?
                         </p>
                     </div>
+                </div>
 
-                    <div class="bg-gray-50 px-4 py-3 flex flex-row-reverse gap-2">
-                        <button type="submit"
-                            class="w-full inline-flex justify-center rounded-lg border border border-gray-300 shadow-sm px-4 py-2 text-base fon1-medium text-white focus:outline-none sm:text-sm transition"
-                            :class="statusForm.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'">
-                            Ya, <span x-text="statusForm.is_active ? 'Nonaktifkan' : 'Aktifkan'"></span>
-                        </button>
-                        <button type="button" @click="statusModal = false"
-                            class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:text-sm">
-                            Batal
-                        </button>
-                    </div>
-                </form>
+                <div class="bg-gray-50 px-4 py-3 flex flex-row-reverse gap-2">
+                    <button type="submit" x-show="!statusForm.is_suspended"
+                        class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:text-sm transition"
+                        :class="statusForm.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'">
+                        Ya, Ubah
+                    </button>
+
+                    <button type="button" @click="statusModal = false"
+                        class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:text-sm">
+                        <span x-text="statusForm.is_suspended ? 'Tutup' : 'Batal'"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

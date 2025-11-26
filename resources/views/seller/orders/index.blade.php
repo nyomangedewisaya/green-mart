@@ -404,60 +404,54 @@
                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
                 x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
+            
+            <div class="bg-green-600 p-6 text-white flex justify-between items-center">
+                <h3 class="text-lg font-bold">Kirim Pesanan</h3>
+                <button @click="resiModal = false" class="text-green-200 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
 
-                <div class="bg-green-600 p-6 text-white flex justify-between items-center">
-                    <h3 class="text-lg font-bold">Kirim Pesanan</h3>
-                    <button @click="resiModal = false" class="text-green-200 hover:text-white"><svg class="w-6 h-6"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg></button>
+            <form :action="'{{ url('seller/orders') }}/' + modalOrder?.order_code" method="POST" class="p-6 space-y-5">
+                @csrf @method('PUT')
+                <input type="hidden" name="action" value="ship">
+                
+                <div class="text-center mb-2">
+                    <p class="text-sm text-gray-500">Masukkan resi untuk pesanan:</p>
+                    <p class="text-xl font-bold text-green-600 font-mono mt-1" x-text="'#' + modalOrder?.order_code"></p>
                 </div>
 
-                <form :action="'{{ url('seller/orders') }}/' + modalOrder?.order_code" method="POST"
-                    class="p-6 space-y-5">
-                    @csrf @method('PUT')
-                    <input type="hidden" name="action" value="ship">
-
-                    <div class="text-center mb-2">
-                        <p class="text-sm text-gray-500">Masukkan data pengiriman untuk:</p>
-                        <p class="text-lg font-bold text-gray-800 font-mono mt-1" x-text="'#' + modalOrder?.order_code">
-                        </p>
+                <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-4">
+                    <div class="p-3 bg-white rounded-lg text-green-600 shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-
-                    <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-3 flex gap-3 mb-4">
-                        <svg class="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p class="text-xs text-yellow-700">Pastikan barang sudah dikemas rapi dan diserahkan ke kurir
-                            sebelum input resi.</p>
-                    </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Jasa Ekspedisi</label>
-                        <input type="text" name="shipping_courier" x-model="courier" required
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                            placeholder="Contoh: JNE, J&T, GoSend">
+                        <p class="text-xs font-bold text-green-800 uppercase mb-0.5">Kurir Pilihan Pembeli</p>
+                        <h4 class="text-lg font-bold text-gray-800" x-text="modalOrder?.shipping_courier || 'Kurir Toko'"></h4>
+                        <p class="text-xs text-gray-500" x-text="modalOrder?.shipping_service || 'Layanan Standar'"></p>
                     </div>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nomor Resi</label>
-                        <input type="text" name="shipping_resi" x-model="resi" required
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition font-mono text-sm uppercase"
-                            placeholder="Masukkan No. Resi">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nomor Resi <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="text" name="shipping_resi" x-model="resi" required autofocus
+                               class="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition font-mono text-lg uppercase tracking-wider placeholder-gray-300" 
+                               placeholder="JPxxxxxxxxxx">
+                        <div class="absolute right-3 top-3.5 text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
                     </div>
+                    <p class="text-xs text-gray-400 mt-2 ml-1">Pastikan resi valid agar bisa dilacak pembeli.</p>
+                </div>
 
-                    <div class="pt-2">
-                        <button type="submit"
-                            class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-md transition transform hover:-translate-y-0.5">
-                            Konfirmasi Pengiriman
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Konfirmasi Kirim
+                    </button>
+                </div>
+            </form>
         </div>
+    </div>
 
         <div x-show="rejectModal" class="fixed inset-0 z-100 flex items-center justify-center p-4"
             style="display: none;">

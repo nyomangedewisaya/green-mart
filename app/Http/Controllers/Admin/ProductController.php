@@ -66,7 +66,7 @@ class ProductController extends Controller
             case 'approve':
                 $product->update([
                     'is_active' => 1,
-                    'admin_notes' => null // Hapus catatan penolakan jika ada
+                    'admin_notes' => null 
                 ]);
                 return back()->with('success', 'Produk berhasil di-Approve.');
 

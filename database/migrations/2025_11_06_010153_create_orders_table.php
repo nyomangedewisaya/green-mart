@@ -19,6 +19,8 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'paid', 'shipped', 'completed', 'cancelled']);
             $table->string('payment_method')->default('transfer');
             $table->text('address');
+            $table->integer('shipping_cost')->default(0);
+            $table->string('shipping_service')->nullable();
             $table->string('shipping_courier')->nullable();
             $table->string('shipping_resi')->nullable();
             $table->date('order_date')->useCurrent();

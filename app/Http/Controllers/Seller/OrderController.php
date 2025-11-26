@@ -62,27 +62,21 @@ class OrderController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $order, $action) {
-
-                // 1. KIRIM PESANAN (Paid -> Shipped)
-                // Dari status PAID langsung input resi jadi SHIPPED
                 if ($action === 'ship') {
-                    if ($order->status !== 'paid') throw new \Exception('Pesanan belum dibayar atau status salah.');
+                    if ($order->status !== 'paid') throw new \Exception('Status order tidak valid.');
                     
                     $request->validate([
-                        'shipping_courier' => 'required|string|max:50',
                         'shipping_resi' => 'required|string|max:50',
                     ]);
 
                     $order->update([
                         'status' => 'shipped',
-                        'shipping_courier' => $request->shipping_courier,
                         'shipping_resi' => $request->shipping_resi,
                     ]);
                     
-                    return back()->with('success', 'Resi diinput. Status berubah menjadi Dikirim.');
+                    return back()->with('success', 'Resi disimpan. Pesanan dalam pengiriman.');
                 }
 
-                // 2. BATALKAN (Pending/Paid -> Cancelled)
                 if ($action === 'cancel') {
                     if (!in_array($order->status, ['pending', 'paid'])) {
                         throw new \Exception('Tidak bisa membatalkan pesanan yang sudah dikirim/selesai.');
@@ -90,7 +84,6 @@ class OrderController extends Controller
 
                     $order->update(['status' => 'cancelled']);
 
-                    // Kembalikan Stok
                     foreach ($order->details as $detail) {
                         if($detail->product) {
                             $detail->product->increment('stock', $detail->quantity);
