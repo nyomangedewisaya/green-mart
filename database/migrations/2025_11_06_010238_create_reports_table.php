@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('seller_id')->nullable()->constrained('sellers')->nullOnDelete();
-            $table->foreignId('product_id')->nullable()->constrained('products')->nullOnDelete();
-            $table->enum('reason', ['fake', 'mismatch', 'scam', 'others']);
+            $table->unsignedBigInteger('target_id');
+            $table->string('target_type');
+            $table->string('reason');
             $table->text('description');
             $table->enum('status', ['pending', 'rejected', 'resolved']);
+            $table->text('admin_note')->nullable();
             $table->timestamps();
         });
     }

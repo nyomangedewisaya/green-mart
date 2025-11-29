@@ -29,7 +29,11 @@ class PromotionController extends Controller
         $perPage = $request->input('per_page', 6);
         $promotions = $query->latest()->paginate($perPage)->appends($request->query());
 
-        return view('seller.promotions.index', compact('promotions'));
+        $activeCount = Promotion::where('status', 'paid')->where('is_active', true)->where('end_date', '>=', Carbon::today())->count();
+
+        $isSlotFull = $activeCount >= 25;
+
+        return view('seller.promotions.index', compact('promotions', 'isSlotFull'));
     }
 
     public function store(Request $request)
@@ -41,6 +45,12 @@ class PromotionController extends Controller
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
         ]);
+
+        $activeCount = Promotion::where('status', 'paid')->where('is_active', true)->where('end_date', '>=', Carbon::today())->count();
+
+        if ($activeCount >= 25) {
+            return back()->withInput()->with('error', 'Mohon maaf, Slot Iklan Penuh (25/25). Silakan coba lagi nanti saat ada iklan yang berakhir.');
+        }
 
         $start = Carbon::parse($request->start_date);
         $end = Carbon::parse($request->end_date);

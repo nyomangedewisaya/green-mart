@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('seller123'),
                 'role' => 'seller',
                 'avatar' => 'https://ui-avatars.com/api/?name=Budi+Santoso',
-                'status' => 'pending', // seller butuh verifikasi
+                'status' => 'active',
                 'created_at' => $now,
                 'updated_at' => $now,
             ],

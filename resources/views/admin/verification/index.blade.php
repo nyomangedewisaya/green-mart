@@ -99,8 +99,13 @@
 
                     <div class="md:col-span-2 flex items-end">
                         <a href="{{ route('admin.verification.index') }}"
-                            class="w-full h-10 px-5 py-5.5 flex items-center justify-center bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
-                            Reset
+                            class="w-full h-[42px] flex items-center justify-center bg-white border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-red-600 transition shadow-sm"
+                            title="Reset Filter">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span class="ml-2 text-sm font-bold">Reset</span>
                         </a>
                     </div>
                 </div>

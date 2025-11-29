@@ -47,10 +47,6 @@
 
     <main class="flex-1 flex items-center justify-center p-6 py-12">
         <div class="max-w-2xl w-full">
-            
-            {{-- ==========================================
-                 KONDISI 1: AKUN DIBEKUKAN (SUSPENDED)
-                 ========================================== --}}
             @if($statusType == 'suspended')
                 <div class="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
                     <div class="bg-red-50 px-8 py-10 text-center border-b border-red-100">
@@ -86,13 +82,10 @@
                     </div>
                 </div>
 
-            {{-- ==========================================
-                 KONDISI 2: PENDING / REVIEW (FIXED LAYOUT)
-                 ========================================== --}}
             @else
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                     
-                    <div class="px-8 py-10 text-center bg-gradient-to-b from-white to-gray-50/50">
+                    <div class="px-8 py-10 text-center bg-linear-to-b from-white to-gray-50/50">
                         <div class="inline-flex p-3 bg-yellow-50 rounded-full mb-4 shadow-sm">
                             <div class="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
                                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">

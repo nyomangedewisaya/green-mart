@@ -70,7 +70,7 @@ class AuthController extends Controller
                 return redirect()->route('seller.status');
             }
 
-            return redirect()->route('home');
+            return redirect()->route('buyer.home');
         }
 
         throw ValidationException::withMessages([

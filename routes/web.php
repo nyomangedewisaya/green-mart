@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\BuyerController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChatController;
+use App\Http\Controllers\Admin\CourierController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\ProductController;
@@ -15,10 +16,15 @@ use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Buyer\HomeController;
+use App\Http\Controllers\Buyer\ReportController as BuyerReportController;
+use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\FinanceController;
+use App\Http\Controllers\Seller\NotificationController as SellerNotificationController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController as SellerProductController;
+use App\Http\Controllers\Seller\ProfileController as SellerProfileController;
 use App\Http\Controllers\Seller\PromotionController as SellerPromotionController;
 use App\Http\Controllers\Seller\StatusController;
 use Illuminate\Support\Facades\Route;
@@ -56,7 +62,8 @@ Route::prefix('admin')
         Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
         Route::get('/products', [ProductController::class, 'index'])->name('products.index');
         Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
-        Route::resource('promotions', PromotionController::class)->except(['show', 'create', 'edit']);
+        Route::resource('promotions', PromotionController::class)->except(['show', 'create', 'edit', 'store']);
+        Route::resource('couriers', CourierController::class)->except(['show', 'destroy']);
         Route::resource('sellers', SellerController::class)->except(['create', 'store', 'show']);
         Route::get('/verification', [VerificationController::class, 'index'])->name('verification.index');
         Route::put('/verification/{seller}/approve', [VerificationController::class, 'approve'])->name('verification.approve');
@@ -84,6 +91,7 @@ Route::prefix('seller')
         Route::get('/status', [StatusController::class, 'index'])->name('status');
         Route::middleware(['seller.verified'])->group(function () {
             Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/dashboard/chart-data', [SellerDashboardController::class, 'getChartData'])->name('dashboard.chart');
             Route::resource('products', SellerProductController::class)->except(['show', 'create', 'edit']);
             Route::resource('orders', OrderController::class)->only(['index', 'update']);
             Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
@@ -91,15 +99,39 @@ Route::prefix('seller')
             Route::post('/finance/bank', [FinanceController::class, 'storeBank'])->name('finance.bank.store');
             Route::delete('/finance/bank/{id}', [FinanceController::class, 'destroyBank'])->name('finance.bank.destroy');
             Route::resource('promotions', SellerPromotionController::class)->only(['index', 'store']);
+            Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
+            Route::controller(SellerNotificationController::class)
+                ->prefix('notifications')
+                ->name('notifications.')
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/mark-all', 'markAllRead')->name('markAllRead');
+                    Route::post('/{id}/read', 'markAsRead')->name('read');
+                    Route::delete('/{id}', 'destroy')->name('destroy');
+                });
+            Route::controller(SellerProfileController::class)
+                ->prefix('profile')
+                ->name('profile.')
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::put('/update-store', 'updateStore')->name('updateStore');
+                    Route::put('/update-account', 'updateAccount')->name('updateAccount');
+                });
         });
     });
 
+Route::middleware(['auth', 'role:buyer', 'buyer.verified']) 
+    ->prefix('buyer')
+    ->name('buyer.') 
+    ->group(function () {
+        Route::view('/suspended', 'buyer.suspended')->name('suspended');
+        Route::get('/', [HomeController::class, 'index'])->name('home');
+        Route::get('/products', [HomeController::class, 'index'])->name('products.index');
+        Route::post('/report-product', [BuyerReportController::class, 'store'])->name('reports.store');
+        Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+        // Route::get('/cart', fn() => 'Keranjang')->name('cart.index');
+        // Route::get('/orders', fn() => 'Pesanan')->name('orders.index');
+        // Route::get('/profile', fn() => 'Profil')->name('profile.index');
+    });
+
 Route::get('/chat/search-user', [ChatController::class, 'searchNewUser'])->name('chats.search_user');
-
-// Route::middleware(['auth', 'seller.approved'])->group(function () {
-//     Route::get('/seller/dashboard', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
-// });
-
-// Route::middleware(['auth'])->group(function () {
-//     Route::get('/dashboard', [HomeController::class, 'index'])->name('home');
-// });

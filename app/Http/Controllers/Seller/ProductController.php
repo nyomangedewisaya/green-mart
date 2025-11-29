@@ -88,7 +88,6 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        // 1. Cek Kepemilikan
         if ($product->seller_id !== Auth::user()->seller->id) {
             abort(403);
         }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\Promotion;
 use App\Models\Seller;
 use App\Models\Report;
 use App\Models\User;
@@ -42,6 +43,7 @@ class DashboardController extends Controller
         $newUsersCount = User::where('created_at', '>=', $startOfMonth)->count();
 
         // --- 4. Action Center (Pending Items) ---
+        $pendingPromotions = Promotion::where('status', 'pending')->count();
         $pendingSellers = Seller::where('is_verified', 0)->count();
         $pendingReports = Report::where('status', 'pending')->count();
         $pendingOrders = Order::where('status', 'pending')->count();
@@ -97,7 +99,7 @@ class DashboardController extends Controller
             'currentRevenue', 'revenueGrowth',
             'currentOrders', 'orderGrowth',
             'newUsersCount', 'aov',
-            'pendingSellers', 'pendingReports', 'pendingOrders', 'pendingWithdrawals', 'totalActionNeeded',
+            'pendingSellers', 'pendingReports', 'pendingPromotions', 'pendingOrders', 'pendingWithdrawals', 'totalActionNeeded',
             'revenueLabels', 'revenueData', 'chartStatusData',
             'recentOrders', 'topSellers', 'topProducts'
         ));

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Withdrawal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WithdrawalController extends Controller
 {
@@ -12,22 +14,18 @@ class WithdrawalController extends Controller
     {
         $query = Withdrawal::with('seller');
 
-        // Filter Status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Cari Nama Seller / Rekening
         if ($request->filled('search')) {
             $query->whereHas('seller', function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%');
             })->orWhere('account_holder', 'like', '%' . $request->search . '%');
         }
         
-        // Statistik Header
         $totalPending = Withdrawal::where('status', 'pending')->sum('amount');
         $totalPaid = Withdrawal::where('status', 'approved')->sum('amount');
-
         $withdrawals = $query->latest()->paginate(10)->appends($request->query());
 
         return view('admin.withdrawals.index', compact('withdrawals', 'totalPending', 'totalPaid'));
@@ -41,32 +39,44 @@ class WithdrawalController extends Controller
             return back()->with('error', 'Permintaan ini sudah diproses sebelumnya.');
         }
 
-        if ($action == 'approve') {
-            // 1. Tandai Approved
-            $withdrawal->update([
-                'status' => 'approved',
-                'admin_note' => 'Transfer Berhasil'
-            ]);
+        return DB::transaction(function () use ($request, $withdrawal, $action) {
             
-            // Catatan: Saldo seller biasanya SUDAH dikurangi saat request dibuat di sisi Seller.
-            // Jadi disini kita tidak perlu kurangi saldo lagi, cukup ubah status.
+            if ($action == 'approve') {
+                $withdrawal->update([
+                    'status' => 'approved',
+                    'admin_note' => 'Transfer Berhasil'
+                ]);
+
+                Notification::create([
+                    'user_id' => $withdrawal->seller->user_id,
+                    'target'  => 'personal',
+                    'type'    => 'success',
+                    'title'   => 'Penarikan Dana Berhasil 💸',
+                    'message' => 'Dana sebesar Rp ' . number_format($withdrawal->amount, 0, ',', '.') . ' telah disetujui dan ditransfer ke rekening Anda.'
+                ]);
+                
+                return back()->with('success', 'Penarikan disetujui. Dana dianggap sudah ditransfer.');
             
-            return back()->with('success', 'Penarikan disetujui. Dana dianggap sudah ditransfer.');
-        
-        } elseif ($action == 'reject') {
-            // 1. Tandai Rejected
-            $withdrawal->update([
-                'status' => 'rejected',
-                'admin_note' => $request->admin_note
-            ]);
+            } elseif ($action == 'reject') {
+                $withdrawal->update([
+                    'status' => 'rejected',
+                    'admin_note' => $request->admin_note
+                ]);
 
-            // 2. KEMBALIKAN SALDO SELLER
-            // Karena request ditolak, uang harus balik ke dompet seller
-            $withdrawal->seller->increment('balance', $withdrawal->amount);
+                $withdrawal->seller->increment('balance', $withdrawal->amount);
 
-            return back()->with('success', 'Penarikan ditolak. Dana dikembalikan ke saldo seller.');
-        }
+                Notification::create([
+                    'user_id' => $withdrawal->seller->user_id,
+                    'target'  => 'personal',
+                    'type'    => 'danger',
+                    'title'   => 'Penarikan Dana Ditolak ❌',
+                    'message' => "Permintaan penarikan dana ditolak. Alasan: \"{$request->admin_note}\". Saldo telah dikembalikan ke dompet toko."
+                ]);
 
-        return back()->with('error', 'Aksi tidak valid.');
+                return back()->with('success', 'Penarikan ditolak. Dana dikembalikan ke saldo seller.');
+            }
+
+            return back()->with('error', 'Aksi tidak valid.');
+        });
     }
 }

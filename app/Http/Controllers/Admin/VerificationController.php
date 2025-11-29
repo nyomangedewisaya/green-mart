@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Seller;
 use Illuminate\Http\Request;
 
@@ -37,24 +38,33 @@ class VerificationController extends Controller
         $seller->update(['is_verified' => 1]);
         $seller->user->update(['status' => 'active']);
 
+        Notification::create([
+            'user_id' => $seller->user_id,
+            'target'  => 'personal',
+            'type'    => 'success',
+            'title'   => 'Toko Terverifikasi! 🎉',
+            'message' => "Selamat! Dokumen toko \"{$seller->name}\" telah disetujui. Anda sekarang dapat menikmati fitur penuh sebagai Seller Terverifikasi."
+        ]);
+
         return back()->with('success', "Toko {$seller->name} berhasil disetujui dan sekarang Aktif.");
     }
 
-    /**
-     * Menolak Seller (Reject).
-     */
     public function reject(Seller $seller)
     {
-        // Hapus file fisik
+        Notification::create([
+            'user_id' => $seller->user_id,
+            'target'  => 'personal',
+            'type'    => 'danger',
+            'title'   => 'Verifikasi Ditolak ❌',
+            'message' => "Mohon maaf, permohonan verifikasi untuk toko \"{$seller->name}\" ditolak karena data tidak lengkap atau tidak sesuai. Silakan ajukan kembali."
+        ]);
+
         if ($seller->logo && !str_starts_with($seller->logo, 'http') && file_exists(public_path($seller->logo))) {
             unlink(public_path($seller->logo));
         }
-        // Hapus data (Soft delete atau Hard delete tergantung kebutuhan, disini Hard Delete)
+        
         $seller->delete();
         
-        // Opsional: Hapus user loginnya juga jika reject pendaftaran awal
-        // $seller->user->delete(); 
-
-        return back()->with('success', "Permohonan toko {$seller->name} telah ditolak dan dihapus.");
+        return back()->with('success', "Permohonan toko telah ditolak dan data dihapus.");
     }
 }

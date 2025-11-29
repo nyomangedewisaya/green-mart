@@ -11,6 +11,9 @@
     } elseif (session('info')) {
         $type = 'info';
         $message = session('info');
+    } elseif ($errors->any()) { 
+        $type = 'error';
+        $message = $errors->first();
     }
 @endphp
 
@@ -19,7 +22,7 @@
         x-data="{ 
             show: false, 
             type: '{{ $type }}', 
-            message: '{{ $message }}' 
+            message: '{{ addslashes($message) }}' 
         }"
         x-init="
             show = true;
@@ -33,7 +36,7 @@
         x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 -translate-y-full"
         
-        class="fixed top-6 left-1/2 -translate-x-1/2 w-full max-w-sm sm:max-w-md z-100 p-4 rounded-lg shadow-2xl border"
+        class="fixed top-6 left-1/2 -translate-x-1/2 w-full max-w-sm sm:max-w-md z-9999 p-4 rounded-lg shadow-2xl border"
         :class="{
             'bg-green-50 border-green-300 text-green-800': type === 'success',
             'bg-red-50 border-red-300 text-red-800': type === 'error',
@@ -42,6 +45,7 @@
         style="display: none;"
     >
         <div class="flex items-center">
+            
             <div class="shrink-0">
                 <svg x-show="type === 'success'" class="w-6 h-6 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
@@ -55,14 +59,14 @@
             </div>
             
             <div class="ml-3 w-0 flex-1">
-                <p class="text-sm font-medium" x-text="message"></p>
+                <p class="text-sm font-medium leading-tight" x-text="message"></p>
             </div>
             
             <div class="ml-4 shrink-0">
                 <button 
                     type="button" 
                     @click="show = false" 
-                    class="inline-flex rounded-md p-1.5 transition"
+                    class="inline-flex rounded-md p-1.5 transition focus:outline-none"
                     :class="{
                         'text-green-500 hover:bg-green-100': type === 'success',
                         'text-red-500 hover:bg-red-100': type === 'error',

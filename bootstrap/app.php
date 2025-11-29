@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureBuyerIsVerified;
 use App\Http\Middleware\EnsureSellerIsVerified;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class, 
             'seller.verified' => EnsureSellerIsVerified::class, 
+            'buyer.verified' => EnsureBuyerIsVerified::class, 
         ]);
 
         $middleware->redirectUsersTo(function (Request $request) {
@@ -22,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($user->role === 'admin') return route('admin.dashboard');
             if ($user->role === 'seller') return route('seller.dashboard');
+            // if ($user->role === 'buyer') return route('seller.dashboard');
             return route('home');
         });
         $middleware->redirectGuestsTo(fn() => route('auth.login'));

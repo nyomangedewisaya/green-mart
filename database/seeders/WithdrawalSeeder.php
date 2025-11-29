@@ -27,7 +27,7 @@ class WithdrawalSeeder extends Seeder
                     'bank_name' => $faker->randomElement(['BCA', 'BRI', 'Mandiri', 'BNI']),
                     'account_number' => $faker->bankAccountNumber,
                     'account_holder' => $seller->name,
-                    'created_at' => $faker->dateTimeBetween('-3 months', 'now'),
+                    'created_at' => \Carbon\Carbon::now()->subDays(rand(0, 7)),
                 ]);
             }
         }

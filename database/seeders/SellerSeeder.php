@@ -25,7 +25,7 @@ class SellerSeeder extends Seeder
                 'phone' => '081234567890',
                 'logo' => 'uploads/sellers/warung-budi-logo.png',
                 'banner' => 'uploads/sellers/warung-budi-banner.jpg',
-                'is_verified' => false, 
+                'is_verified' => true, 
                 'rating' => 4.50,
                 'created_at' => $now,
                 'updated_at' => $now,

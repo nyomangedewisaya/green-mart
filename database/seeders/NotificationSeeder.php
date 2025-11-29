@@ -2,71 +2,63 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Seeder;
 use App\Models\Notification;
 use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use Faker\Factory as Faker;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        // 1. Bersihkan data lama
-        Notification::truncate();
+        // 1. MATIKAN Foreign Key Checks (Agar bisa truncate)
+        Schema::disableForeignKeyConstraints();
 
-        $now = Carbon::now();
+        // 2. KOSONGKAN TABEL (Urutan: Pivot dulu, baru Parent)
+        DB::table('notification_user')->truncate(); // Hapus data interaksi user
+        Notification::truncate();                   // Hapus data notifikasi utama
 
-        // 2. Daftar Notifikasi Broadcast (Sistem)
-        $notifications = [
-            [
-                'target' => 'all',
-                'title' => 'Selamat Datang di Green Mart v2.0!',
-                'message' => 'Kami telah memperbarui tampilan dan performa sistem. Nikmati pengalaman berbelanja yang lebih cepat.',
-                'type' => 'system',
-                'created_at' => $now->copy()->subDays(7),
-            ],
-            [
-                'target' => 'sellers',
-                'title' => 'Wajib: Lengkapi Data Toko Anda',
-                'message' => 'Kepada seluruh Seller, harap segera melengkapi foto profil dan deskripsi toko agar terlihat lebih terpercaya oleh pembeli.',
-                'type' => 'system',
-                'created_at' => $now->copy()->subDays(3),
-            ],
-            [
-                'target' => 'buyers',
-                'title' => 'Promo Gajian Tiba!',
-                'message' => 'Dapatkan diskon ongkir spesial untuk pembelian sayur dan buah segar mulai tanggal 25 bulan ini.',
-                'type' => 'banner', // Tipe banner/promo
-                'created_at' => $now->copy()->subDays(1),
-            ],
-            [
-                'target' => 'all',
-                'title' => 'Jadwal Pemeliharaan Sistem',
-                'message' => 'Sistem akan mengalami downtime sebentar pada hari Minggu pukul 02:00 - 04:00 WIB untuk peningkatan server.',
-                'type' => 'system',
-                'created_at' => $now->copy()->subHours(5),
-            ],
-            [
-                'target' => 'sellers',
-                'title' => 'Fitur Baru: Kelola Promosi',
-                'message' => 'Kabar gembira! Sekarang Anda bisa mengajukan banner promosi untuk toko Anda langsung dari dashboard seller.',
-                'type' => 'system',
-                'created_at' => $now->copy()->subMinutes(30),
-            ],
-        ];
+        // 3. NYALAKAN KEMBALI Foreign Key Checks
+        Schema::enableForeignKeyConstraints();
 
-        // 3. Masukkan ke Database
-        foreach ($notifications as $data) {
+        // --- MULAI SEEDING DATA ---
+
+        // A. Buat Notifikasi Global (Target: All)
+        $promo = Notification::create([
+            'title'   => 'Promo Gajian Hemat! 🤑',
+            'message' => 'Dapatkan diskon hingga 50% untuk semua produk sayuran segar hanya hari ini.',
+            'type'    => 'info', // info/success/warning/danger
+            'target'  => 'all',
+        ]);
+
+        // B. Buat Notifikasi Khusus Seller
+        $maintenance = Notification::create([
+            'title'   => 'Jadwal Maintenance Sistem ⚠️',
+            'message' => 'Sistem akan mengalami pemeliharaan pada jam 02:00 - 04:00 WIB. Mohon selesaikan pesanan sebelum jam tersebut.',
+            'type'    => 'warning',
+            'target'  => 'sellers',
+        ]);
+
+        // C. Buat Notifikasi Personal (Contoh: untuk Seller Pertama)
+        $firstSeller = User::where('role', 'seller')->first();
+        if ($firstSeller) {
             Notification::create([
-                'user_id' => null, // NULL karena ini Broadcast Global
-                'target' => $data['target'],
-                'title' => $data['title'],
-                'message' => $data['message'],
-                'type' => $data['type'],
-                'created_at' => $data['created_at'],
-                'updated_at' => $data['created_at'],
+                'user_id' => $firstSeller->id,
+                'title'   => 'Selamat Datang, Seller! 🎉',
+                'message' => 'Terima kasih telah bergabung. Segera lengkapi profil toko Anda untuk mulai berjualan.',
+                'type'    => 'success',
+                'target'  => 'personal',
+            ]);
+
+            // Simulasi: Seller ini sudah membaca notifikasi Promo (Masuk tabel pivot)
+            $promo->users()->attach($firstSeller->id, [
+                'read_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

@@ -2,51 +2,69 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
-use App\Models\Report;
-use App\Models\Seller;
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Faker\Factory as Faker;
+use App\Models\Report;
+use App\Models\User;
+use App\Models\Product;
+use App\Models\Seller;
 
 class ReportSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = Faker::create('id_ID');
+        $reporters = User::where('role', 'buyer')->take(3)->get();
+        
+        if ($reporters->isEmpty()) return;
 
-        $userIds = User::pluck('id')->toArray();
-        $productIds = Product::pluck('id')->toArray();
-        $sellerIds = Seller::pluck('id')->toArray();
-
-        if (empty($userIds) || (empty($productIds) && empty($sellerIds))) {
-            $this->command->error('Data User, Product, atau Seller kosong. Harap seed data master terlebih dahulu.');
-            return;
+        $product = Product::first();
+        if ($product) {
+            Report::create([
+                'user_id'     => $reporters->random()->id,
+                'target_id'   => $product->id,
+                'target_type' => Product::class, 
+                'reason'      => 'Barang Palsu / KW',
+                'description' => 'Saya curiga produk ini tidak original karena harganya terlalu murah dan kemasan berbeda.',
+                'status'      => 'pending',
+            ]);
         }
 
-        for ($i = 0; $i < 15; $i++) {
-            $target = $faker->randomElement(['product', 'seller']);
-            $productId = null;
-            $sellerId = null;
-
-            if ($target === 'product' && !empty($productIds)) {
-                $productId = $faker->randomElement($productIds);
-            } elseif (!empty($sellerIds)) {
-                $sellerId = $faker->randomElement($sellerIds);
-            } else {
-                continue;
-            }
-
+        $seller = Seller::first();
+        if ($seller) {
             Report::create([
-                'user_id' => $faker->randomElement($userIds),
-                'product_id' => $productId,
-                'seller_id' => $sellerId,
-                'reason' => $faker->randomElement(['fake', 'mismatch', 'scam', 'others']),
-                'description' => $faker->paragraph(2), 
-                'status' => $faker->randomElement(['pending', 'pending', 'resolved', 'rejected']),
-                'created_at' => $faker->dateTimeBetween('-1 month', 'now'),
-                'updated_at' => now(),
+                'user_id'     => $reporters->random()->id,
+                'target_id'   => $seller->id,
+                'target_type' => Seller::class,
+                'reason'      => 'Toko Fiktif',
+                'description' => 'Toko ini meminta transfer di luar aplikasi dan chat kasar.',
+                'status'      => 'pending',
+            ]);
+        }
+
+        $badBuyer = User::where('role', 'buyer')->whereNotIn('id', $reporters->pluck('id'))->first();
+        
+        $sellerUser = User::where('role', 'seller')->first();
+        
+        if ($badBuyer && $sellerUser) {
+            Report::create([
+                'user_id'     => $sellerUser->id, 
+                'target_id'   => $badBuyer->id,   
+                'target_type' => User::class,     
+                'reason'      => 'Menolak Bayar COD',
+                'description' => 'Paket sudah sampai tapi pembeli menolak membayar dan memaki kurir.',
+                'status'      => 'pending',
+            ]);
+        }
+
+        if ($product) {
+            Report::create([
+                'user_id'     => $reporters->random()->id,
+                'target_id'   => $product->id,
+                'target_type' => Product::class,
+                'reason'      => 'Produk Terlaris',
+                'description' => 'Salah kategori produk.',
+                'status'      => 'resolved',
+                'admin_note'  => 'Kategori produk sudah kami perbaiki.',
+                'created_at'  => now()->subDays(3),
             ]);
         }
     }

@@ -14,13 +14,8 @@ class Report extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function product()
+    public function target()
     {
-        return $this->belongsTo(Product::class);
-    }
-
-    public function seller()
-    {
-        return $this->belongsTo(Seller::class);
+        return $this->morphTo();
     }
 }

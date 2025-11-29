@@ -11,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-gray-50 h-screen flex overflow-hidden" x-data="{ sidebarOpen: false }">
+<body class="bg-gray-50 h-screen flex overflow-hidden" x-data="{ sidebarOpen: false, logoutModal: false }">
 
     <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black/50 z-40 lg:hidden"
         x-transition></div>
@@ -87,45 +87,196 @@
             </a>
 
             <div class="pt-4 border-t border-gray-100 mt-4">
-                <form method="POST" action="{{ route('auth.logout') }}">
-                    @csrf
-                    <button type="submit"
-                        class="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors group">
-                        <svg class="w-5 h-5 mr-3 text-red-400 group-hover:text-red-600" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Keluar
-                    </button>
-                </form>
+                <button @click="logoutModal = true"
+                    class="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors group">
+                    <svg class="w-5 h-5 mr-3 text-red-400 group-hover:text-red-600" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Keluar
+                </button>
             </div>
         </nav>
     </aside>
 
     <div class="flex-1 flex flex-col h-screen overflow-hidden">
 
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-30">
-            <div class="flex items-center">
-                <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 mr-4"><svg class="w-6 h-6"
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                    </svg></button>
-                <h2 class="text-lg font-bold text-gray-800">@yield('title')</h2>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="text-right hidden sm:block">
-                    <p class="text-sm font-bold text-gray-900">{{ Auth::user()->name }}</p>
-                    <p class="text-xs text-gray-500">{{ Auth::user()->seller->name ?? 'Toko Baru' }}</p>
+        <header class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-200 z-30">
+            <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+
+                <div class="flex items-center">
+                    <button @click="sidebarOpen = !sidebarOpen"
+                        class="lg:hidden text-gray-500 hover:text-gray-700 transition p-2 rounded-md hover:bg-gray-100 mr-2">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M3.75 6.75h16.5M3.75 12h16.5m-1.5 5.25h16.5" />
+                        </svg>
+                    </button>
+
+                    <div class="hidden sm:flex items-center px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span class="relative flex h-2 w-2 mr-2">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span class="text-xs font-bold text-green-700 tracking-wide uppercase">Online</span>
+                    </div>
                 </div>
-                <div class="h-9 w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
-                    @if (Auth::user()->seller && Auth::user()->seller->logo)
-                        <img src="{{ asset(Auth::user()->seller->logo) }}" class="w-full h-full object-cover">
-                    @else
-                        <span
-                            class="w-full h-full flex items-center justify-center font-bold text-gray-500">{{ substr(Auth::user()->name, 0, 1) }}</span>
-                    @endif
+
+                <div class="hidden md:flex items-center justify-center flex-1" x-data="{
+                    date: '{{ \Carbon\Carbon::now()->locale('id')->translatedFormat('l, d F') }}',
+                    time: '{{ \Carbon\Carbon::now()->format('H:i:s') }}',
+                    greeting: '{{ \Carbon\Carbon::now()->hour < 10 ? 'Selamat Pagi ☀️' : (\Carbon\Carbon::now()->hour < 15 ? 'Selamat Siang 🌤️' : (\Carbon\Carbon::now()->hour < 18 ? 'Selamat Sore 🌥️' : 'Selamat Malam 🌙')) }}',
+                
+                    initClock() {
+                        const update = () => {
+                            const now = new Date();
+                            this.date = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+                            this.time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace('.', ':');
+                
+                            const h = now.getHours();
+                            if (h < 10) this.greeting = 'Selamat Pagi ☀️';
+                            else if (h < 15) this.greeting = 'Selamat Siang 🌤️';
+                            else if (h < 18) this.greeting = 'Selamat Sore 🌥️';
+                            else this.greeting = 'Selamat Malam 🌙';
+                        };
+                        setInterval(update, 1000);
+                    }
+                }"
+                    x-init="initClock()">
+
+                    <div
+                        class="flex items-center bg-gray-50 border border-gray-200 rounded-full px-5 py-1.5 shadow-sm group hover:border-green-200 transition-colors">
+                        <span class="text-sm font-semibold text-gray-700 mr-3" x-text="greeting">
+                            {{ \Carbon\Carbon::now()->hour < 10 ? 'Selamat Pagi ☀️' : (\Carbon\Carbon::now()->hour < 15 ? 'Selamat Siang 🌤️' : (\Carbon\Carbon::now()->hour < 18 ? 'Selamat Sore 🌥️' : 'Selamat Malam 🌙')) }}
+                        </span>
+
+                        <div class="h-4 w-px bg-gray-300 mx-1"></div>
+
+                        <span class="text-sm text-gray-500 mx-3" x-text="date">
+                            {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('l, d F') }}
+                        </span>
+
+                        <div class="h-4 w-px bg-gray-300 mx-1"></div>
+
+                        <span class="text-sm font-mono font-bold text-green-600 ml-3 min-w-20" x-text="time">
+                            {{ \Carbon\Carbon::now()->format('H:i:s') }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-4">
+
+                    <a href="#"
+                        class="relative p-2 text-gray-400 hover:bg-gray-100 hover:text-green-600 rounded-lg transition-all group"
+                        title="Pesan Pelanggan">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        @if (isset($unreadChatCount) && $unreadChatCount > 0)
+                            <span
+                                class="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold border-2 border-white shadow-sm">
+                                {{ $unreadChatCount > 99 ? '99+' : $unreadChatCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <a href="{{ route('seller.notifications.index') }}"
+                        class="relative p-2 text-gray-400 hover:bg-gray-100 hover:text-green-600 rounded-lg transition-all group"
+                        title="Notifikasi">
+
+                        <svg class="w-6 h-6 group-hover:scale-110 transition-transform duration-200" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+
+                        @if (isset($unreadNotifCount) && $unreadNotifCount > 0)
+                            <span
+                                class="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold border-2 border-white shadow-sm transform translate-x-1 -translate-y-1">
+                                {{ $unreadNotifCount > 99 ? '99+' : $unreadNotifCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <div class="h-8 w-px bg-gray-200 mx-1"></div>
+
+                    <div x-data="{ dropdownOpen: false }" class="relative">
+                        <button @click="dropdownOpen = !dropdownOpen"
+                            class="flex items-center gap-3 hover:bg-gray-50 p-1.5 rounded-xl transition-all border border-transparent hover:border-gray-100 group">
+
+                            <div
+                                class="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center shadow-sm ring-2 ring-gray-100 group-hover:ring-green-200 transition bg-white">
+                                @if (Auth::user()->seller && Auth::user()->seller->logo)
+                                    <img src="{{ asset(Auth::user()->seller->logo) }}"
+                                        class="w-full h-full object-cover">
+                                @else
+                                    <div
+                                        class="w-full h-full bg-linear-to-br from-gray-800 to-gray-900 flex items-center justify-center text-white font-bold text-sm">
+                                        {{ substr(Auth::user()->seller->name ?? Auth::user()->name, 0, 1) }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="hidden md:block text-left">
+                                <p class="text-sm font-bold text-gray-700 leading-none truncate max-w-[120px]">
+                                    {{ Auth::user()->seller->name ?? 'Toko Baru' }}
+                                </p>
+                                <p class="text-xs text-gray-400 mt-1 leading-none truncate max-w-[120px]">
+                                    {{ Auth::user()->name }}
+                                </p>
+                            </div>
+
+                            <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-200"
+                                :class="{ 'rotate-180': dropdownOpen }" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div x-show="dropdownOpen" @click.away="dropdownOpen = false"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50"
+                            style="display: none;">
+
+                            <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/50 rounded-t-xl md:hidden">
+                                <p class="text-sm font-bold text-gray-900">
+                                    {{ Auth::user()->seller->name ?? 'Toko Baru' }}</p>
+                                <p class="text-xs text-gray-500">{{ Auth::user()->name }}</p>
+                            </div>
+
+                            <div class="px-2 space-y-1 pt-1">
+                                <a href="{{ route('seller.profile.index') }}"
+                                    class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition">
+                                    <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    Profil Toko
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+
+                                <button @click="logoutModal = true"
+                                    class="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors group">
+                                    <svg class="w-5 h-5 mr-3 text-red-400 group-hover:text-red-600" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    Keluar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -141,6 +292,41 @@
 
         </main>
     </div>
+
+    <div x-show="logoutModal" class="fixed inset-0 z-999 flex items-center justify-center p-4"
+        style="display: none;">
+        <div x-show="logoutModal" @click="logoutModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
+
+        <div x-show="logoutModal" class="relative w-full max-w-sm bg-white rounded-xl shadow-2xl overflow-hidden"
+            x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
+            x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
+            <div class="p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900">Konfirmasi Keluar</h3>
+                <p class="text-sm text-gray-500 mt-2">Apakah Anda yakin ingin mengakhiri sesi ini?</p>
+            </div>
+            <div class="bg-gray-50 px-6 py-3 flex flex-row-reverse gap-2">
+                <a href="{{ route('auth.logout') }}"
+                    class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm transition">
+                    Ya, Keluar
+                </a>
+                <button type="button" @click="logoutModal = false"
+                    class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

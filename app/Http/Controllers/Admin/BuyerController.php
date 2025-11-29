@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Notification; 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BuyerController extends Controller
 {
@@ -40,20 +42,45 @@ class BuyerController extends Controller
             return back()->with('error', 'User ini bukan buyer.');
         }
 
-        if ($request->input('action') === 'toggle_status') {
-            $currentStatus = $buyer->status;
+        $action = $request->input('action');
 
-            if ($currentStatus === 'active') {
-                $newStatus = 'suspended';
-                $msg = 'dibekukan (suspended)';
-            } else {
-                $newStatus = 'active';
-                $msg = 'diaktifkan (active)';
+        if ($action === 'toggle_status') {
+            
+            if ($buyer->status === 'active') {
+                $request->validate([
+                    'admin_note' => 'required|string|max:255'
+                ]);
             }
 
-            $buyer->update(['status' => $newStatus]);
+            return DB::transaction(function () use ($request, $buyer) {
+                
+                if ($buyer->status === 'active') {
+                    $buyer->update(['status' => 'suspended']);
+                    
+                    Notification::create([
+                        'user_id' => $buyer->id,
+                        'target'  => 'personal',
+                        'type'    => 'danger',
+                        'title'   => 'Akun Dibekukan ⛔',
+                        'message' => "Akun Anda telah dibekukan oleh Admin. Alasan: \"{$request->admin_note}\". Hubungi CS untuk bantuan."
+                    ]);
+                    
+                    return back()->with('success', "Akun buyer berhasil dibekukan (suspended).");
+                } 
+                else {
+                    $buyer->update(['status' => 'active']);
 
-            return back()->with('success', "Akun buyer berhasil $msg.");
+                    Notification::create([
+                        'user_id' => $buyer->id,
+                        'target'  => 'personal',
+                        'type'    => 'success',
+                        'title'   => 'Akun Aktif Kembali ✅',
+                        'message' => "Selamat! Pembekuan akun Anda telah dicabut. Anda dapat berbelanja kembali."
+                    ]);
+
+                    return back()->with('success', "Akun buyer berhasil diaktifkan kembali.");
+                }
+            });
         }
 
         return back()->with('error', 'Aksi tidak valid.');

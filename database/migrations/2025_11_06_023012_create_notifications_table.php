@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('title');
             $table->string('message');
-            $table->enum('type', ['report', 'order', 'banner', 'system']);
+            $table->enum('type', ['info', 'success', 'warning', 'danger'])->default('info');
             $table->enum('target', ['personal', 'all', 'sellers', 'buyers'])->default('personal');
             $table->timestamps();
         });

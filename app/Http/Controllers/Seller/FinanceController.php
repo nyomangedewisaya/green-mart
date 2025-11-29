@@ -21,13 +21,9 @@ class FinanceController extends Controller
         $currentBalance = $seller->balance;
 
         $totalEarnings = Order::where('seller_id', $seller->id)->where('status', 'completed')->sum('total_amount');
-
         $totalWithdrawn = Withdrawal::where('seller_id', $seller->id)->where('status', 'approved')->sum('amount');
-
         $pendingWithdrawal = Withdrawal::where('seller_id', $seller->id)->where('status', 'pending')->sum('amount');
-
         $totalAdsSpent = Promotion::where('seller_id', $seller->id)->where('status', 'paid')->sum('price');
-
         $thisMonthRevenue = Order::where('seller_id', $seller->id)->where('status', 'completed')->whereMonth('created_at', $now->month)->sum('total_amount');
 
         $lastMonthRevenue = Order::where('seller_id', $seller->id)
@@ -71,14 +67,11 @@ class FinanceController extends Controller
         $expenses = collect([]);
 
         if ($filterType == 'all' || $filterType == 'expense') {
-            // 1. Penarikan Dana (Withdrawal)
-            // Tambahkan ->map() untuk memastikan konsistensi struktur object
             $withdrawals = Withdrawal::where('seller_id', $seller->id)
                 ->latest('created_at')
                 ->limit(20)
                 ->get()
                 ->map(function ($wd) {
-                    // Ubah jadi Object
                     return (object) [
                         'id' => $wd->id,
                         'code' => 'WD',
@@ -89,22 +82,20 @@ class FinanceController extends Controller
                         'account_number' => $wd->account_number,
                         'account_holder' => $wd->account_holder,
                         'type' => 'expense',
-                        'description' => $wd->status, // pending/approved/rejected
+                        'description' => $wd->status,
                         'note' => $wd->admin_note,
                         'start_date' => null,
                         'end_date' => null,
-                        'payment_method' => null, // Tambahan agar tidak error undefined
+                        'payment_method' => null,
                     ];
                 });
 
-            // 2. Biaya Iklan (Promosi)
             $promotions = Promotion::where('seller_id', $seller->id)
                 ->whereIn('status', ['paid', 'pending'])
                 ->latest('updated_at')
                 ->limit(20)
                 ->get()
                 ->map(function ($promo) {
-                    // ▼▼▼ PERBAIKAN UTAMA: Cast ke (object) ▼▼▼
                     return (object) [
                         'id' => $promo->id,
                         'code' => 'ADS',
@@ -119,15 +110,13 @@ class FinanceController extends Controller
                         'bank_name' => null,
                         'account_number' => null,
                         'account_holder' => null,
-                        'payment_method' => null, // Tambahan
+                        'payment_method' => null,
                     ];
                 });
 
             $expenses = $withdrawals->concat($promotions);
         }
 
-        // A. Income: Penjualan
-        // Kita map juga agar konsisten jadi object standar
         if ($filterType == 'all' || $filterType == 'income') {
             $incomes = Order::where('seller_id', $seller->id)
                 ->where('status', 'completed')
@@ -145,7 +134,7 @@ class FinanceController extends Controller
                         'type' => 'income',
                         'description' => 'Penjualan',
                         'note' => null,
-                        'status' => 'completed', // Tambahan
+                        'status' => 'completed', 
                         'start_date' => null,
                         'end_date' => null,
                         'bank_name' => null,

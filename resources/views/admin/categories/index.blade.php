@@ -149,7 +149,7 @@
                                         editForm.id = {{ $category->id }};
                                         editForm.name = '{{ $category->name }}';
                                         editAction = '{{ route('admin.categories.update', $category) }}';
-                                    "
+                                        "
                                         class="text-blue-600 hover:text-blue-800 transition transform hover:-translate-y-0.5"
                                         title="Edit">
                                         <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"

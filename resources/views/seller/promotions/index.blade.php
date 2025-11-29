@@ -96,13 +96,31 @@
                 <p class="text-sm text-gray-500 mt-1">Pasang iklan banner agar toko Anda lebih dikenal.</p>
             </div>
 
-            <button @click="openCreateModal()"
-                class="group flex items-center px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-700 hover:shadow-xl transition transform hover:-translate-y-0.5">
-                <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Ajukan Iklan Baru
-            </button>
+            @if ($isSlotFull)
+                <div class="group relative inline-block">
+                    <button disabled
+                        class="flex items-center px-5 py-2.5 bg-gray-300 text-gray-500 text-sm font-bold rounded-xl cursor-not-allowed">
+                        <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Slot Penuh (25/25)
+                    </button>
+                    {{-- Tooltip --}}
+                    <div
+                        class="absolute right-0 top-full mt-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition pointer-events-none z-10 text-center">
+                        Maaf, slot iklan saat ini sedang penuh. Silakan coba lagi nanti.
+                    </div>
+                </div>
+            @else
+                <button @click="openCreateModal()"
+                    class="group flex items-center px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-700 hover:shadow-xl transition transform hover:-translate-y-0.5">
+                    <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Ajukan Iklan Baru
+                </button>
+            @endif
         </div>
 
         <div class="bg-white border border-green-100 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start gap-6">

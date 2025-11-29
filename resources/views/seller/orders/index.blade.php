@@ -6,15 +6,10 @@
     <div x-data="{
         detailModal: false,
         resiModal: false,
-        rejectModal: false, // State Modal Tolak
-    
+        rejectModal: false,
         modalOrder: null,
-        searchQuery: '{{ request('search', '') }}',
-    
-        // Form Data
-        courier: '',
         resi: '',
-        rejectAction: '', // URL untuk submit tolak
+        actionUrl: '',
     
         formatCurrency(value) {
             if (isNaN(value)) return 'Rp 0';
@@ -46,14 +41,16 @@
     
         openResiModal(order) {
             this.modalOrder = order;
-            this.resiModal = true;
-            this.courier = '';
             this.resi = '';
+            // Menggunakan order_code sesuai route key name
+            this.actionUrl = '{{ url('seller/orders') }}/' + order.order_code;
+            this.resiModal = true;
         },
     
         openRejectModal(order) {
             this.modalOrder = order;
-            this.rejectAction = `{{ url('seller/orders') }}/${order.order_code}`; 
+            // Menggunakan order_code sesuai route key name
+            this.actionUrl = '{{ url('seller/orders') }}/' + order.order_code;
             this.rejectModal = true;
         }
     }" class="space-y-6 font-inter">
@@ -198,7 +195,8 @@
                         <div class="md:col-span-3 flex flex-col gap-2 justify-center">
 
                             @if ($order->status == 'paid')
-                                <button @click="openResiModal({{ $order->toJson() }})"
+                                {{-- PERBAIKAN: Menggunakan Js::from agar data ter-passing dengan aman --}}
+                                <button @click="openResiModal({{ \Illuminate\Support\Js::from($order) }})"
                                     class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg transition shadow-md flex items-center justify-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -207,14 +205,14 @@
                                     Kirim Pesanan
                                 </button>
 
-                                <button @click="openRejectModal({{ $order->toJson() }})"
+                                <button @click="openRejectModal({{ \Illuminate\Support\Js::from($order) }})"
                                     class="w-full py-2.5 bg-white border border-red-200 text-red-600 text-sm font-bold rounded-lg hover:bg-red-50 transition">
                                     Tolak Pesanan
                                 </button>
                             @endif
 
                             <button
-                                @click="detailModal = true; modalOrder = {{ $order->toJson() }}; modalOrder.details = {{ $order->details->load('product')->toJson() }};"
+                                @click="detailModal = true; modalOrder = {{ \Illuminate\Support\Js::from($order->load('details.product', 'user')) }}"
                                 class="w-full py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 hover:text-green-600 transition">
                                 Lihat Rincian
                             </button>
@@ -256,8 +254,142 @@
             </div>
         </div>
 
-        <div x-show="detailModal" class="fixed inset-0 z-100 flex items-center justify-center p-4"
-            style="display: none;">
+        {{-- MODAL KIRIM PESANAN --}}
+        <div x-show="resiModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;"
+            x-cloak>
+            <div x-show="resiModal" @click="resiModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            </div>
+
+            <div x-show="resiModal"
+                class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
+                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
+
+                <div class="bg-green-600 p-6 text-white flex justify-between items-center">
+                    <h3 class="text-lg font-bold">Kirim Pesanan</h3>
+                    <button @click="resiModal = false" class="text-green-200 hover:text-white"><svg class="w-6 h-6"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg></button>
+                </div>
+
+                <form :action="actionUrl" method="POST" class="p-6 space-y-5">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="ship">
+
+                    <div class="text-center mb-2">
+                        <p class="text-sm text-gray-500">Masukkan resi untuk pesanan:</p>
+                        <p class="text-xl font-bold text-green-600 font-mono mt-1" x-text="'#' + modalOrder?.order_code">
+                        </p>
+                    </div>
+
+                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-4">
+                        <div class="p-3 bg-white rounded-lg text-green-600 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-green-800 uppercase mb-0.5">Kurir Pilihan Pembeli</p>
+                            <h4 class="text-lg font-bold text-gray-800"
+                                x-text="modalOrder?.shipping_courier || 'Kurir Toko'"></h4>
+                            <p class="text-xs text-gray-500" x-text="modalOrder?.shipping_service || 'Layanan Standar'">
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nomor Resi <span
+                                class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <input type="text" name="shipping_resi" x-model="resi" required autofocus
+                                class="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition font-mono text-lg uppercase tracking-wider placeholder-gray-300"
+                                placeholder="JPxxxxxxxxxx">
+                            <div class="absolute right-3 top-3.5 text-gray-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 ml-1">Pastikan resi valid agar bisa dilacak pembeli.</p>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit"
+                            class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7" />
+                            </svg>
+                            Konfirmasi Kirim
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="rejectModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;"
+            x-cloak>
+            <div x-show="rejectModal" @click="rejectModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            </div>
+
+            <div x-show="rejectModal"
+                class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
+                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
+
+                <div class="bg-red-600 p-6 text-white flex justify-between items-center">
+                    <h3 class="text-lg font-bold">Tolak Pesanan</h3>
+                    <button @click="rejectModal = false" class="text-red-200 hover:text-white"><svg class="w-6 h-6"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg></button>
+                </div>
+
+                <form :action="actionUrl" method="POST" class="p-6 space-y-5">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="cancel">
+
+                    <div class="text-center">
+                        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Anda Yakin?</h3>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Pesanan <span class="font-mono font-bold text-gray-800"
+                                x-text="'#' + modalOrder?.order_code"></span> akan dibatalkan.
+                        </p>
+                        <p class="text-xs text-red-500 mt-1">Stok produk akan dikembalikan otomatis.</p>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" @click="rejectModal = false"
+                            class="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition">Batal</button>
+                        <button type="submit"
+                            class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition shadow-md">Ya,
+                            Tolak</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="detailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;"
+            x-cloak>
             <div x-show="detailModal" @click="detailModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
@@ -280,13 +412,11 @@
                             <span x-text="formatDate(modalOrder?.created_at)"></span>
                         </p>
                     </div>
-                    <button @click="detailModal = false"
-                        class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition backdrop-blur-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="detailModal = false" class="text-red-200 hover:text-white"><svg class="w-6 h-6"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                        </svg></button>
                 </div>
 
                 <div class="p-6 overflow-y-auto custom-scroll space-y-6 bg-gray-50/50">
@@ -382,127 +512,77 @@
                         </div>
                     </div>
                 </div>
+                <div class="px-6 pb-6" x-data="{ showReport: false }">
 
+                    <div class="flex justify-end" x-show="!showReport">
+                        <button @click="showReport = true" type="button"
+                            class="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Laporkan Pembeli
+                        </button>
+                    </div>
+
+                    <div x-show="showReport" x-transition class="mt-4 bg-red-50 border border-red-100 rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-bold text-red-800 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Laporkan Masalah
+                            </h4>
+                            <button @click="showReport = false" type="button" class="text-gray-400 hover:text-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form action="{{ route('seller.reports.store') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="order_id" :value="modalOrder?.id">
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-red-700 mb-1">Alasan Pelaporan</label>
+                                    <select name="reason" required
+                                        class="w-full px-3 py-2 bg-white border border-red-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-gray-700">
+                                        <option value="">Pilih Masalah...</option>
+                                        <option value="Pembeli Tidak Responsif">Pembeli Tidak Responsif</option>
+                                        <option value="Menolak Bayar COD">Menolak Bayar COD</option>
+                                        <option value="Alamat Palsu / Fiktif">Alamat Palsu / Fiktif</option>
+                                        <option value="Chat Kasar / SARA">Chat Kasar / SARA</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-red-700 mb-1">Detail Kejadian</label>
+                                    <textarea name="description" rows="2" required
+                                        class="w-full px-3 py-2 bg-white border border-red-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none placeholder-red-400"
+                                        placeholder="Jelaskan kronologi masalah dengan singkat..."></textarea>
+                                </div>
+
+                                <div class="flex justify-end pt-2">
+                                    <button type="submit"
+                                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+                                        Kirim Laporan
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 <div
                     class="bg-white px-6 py-4 border-t border-gray-200 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-10">
                     <span class="text-sm font-medium text-gray-500">Total Pembayaran</span>
                     <span class="text-2xl font-bold text-green-600"
                         x-text="formatCurrency(modalOrder?.total_amount)"></span>
                 </div>
-            </div>
-        </div>
-
-        <div x-show="resiModal" class="fixed inset-0 z-100 flex items-center justify-center p-4" style="display: none;">
-            <div x-show="resiModal" @click="resiModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
-                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-            </div>
-
-            <div x-show="resiModal"
-                class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
-                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
-                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
-            
-            <div class="bg-green-600 p-6 text-white flex justify-between items-center">
-                <h3 class="text-lg font-bold">Kirim Pesanan</h3>
-                <button @click="resiModal = false" class="text-green-200 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-
-            <form :action="'{{ url('seller/orders') }}/' + modalOrder?.order_code" method="POST" class="p-6 space-y-5">
-                @csrf @method('PUT')
-                <input type="hidden" name="action" value="ship">
-                
-                <div class="text-center mb-2">
-                    <p class="text-sm text-gray-500">Masukkan resi untuk pesanan:</p>
-                    <p class="text-xl font-bold text-green-600 font-mono mt-1" x-text="'#' + modalOrder?.order_code"></p>
-                </div>
-
-                <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-4">
-                    <div class="p-3 bg-white rounded-lg text-green-600 shadow-sm">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-green-800 uppercase mb-0.5">Kurir Pilihan Pembeli</p>
-                        <h4 class="text-lg font-bold text-gray-800" x-text="modalOrder?.shipping_courier || 'Kurir Toko'"></h4>
-                        <p class="text-xs text-gray-500" x-text="modalOrder?.shipping_service || 'Layanan Standar'"></p>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nomor Resi <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input type="text" name="shipping_resi" x-model="resi" required autofocus
-                               class="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition font-mono text-lg uppercase tracking-wider placeholder-gray-300" 
-                               placeholder="JPxxxxxxxxxx">
-                        <div class="absolute right-3 top-3.5 text-gray-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-2 ml-1">Pastikan resi valid agar bisa dilacak pembeli.</p>
-                </div>
-
-                <div class="pt-2">
-                    <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        Konfirmasi Kirim
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-        <div x-show="rejectModal" class="fixed inset-0 z-100 flex items-center justify-center p-4"
-            style="display: none;">
-            <div x-show="rejectModal" @click="rejectModal = false" class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
-                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-            </div>
-
-            <div x-show="rejectModal"
-                class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-90"
-                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
-                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-90">
-
-                <div class="bg-red-600 p-6 text-white flex justify-between items-center">
-                    <h3 class="text-lg font-bold">Tolak Pesanan</h3>
-                    <button @click="rejectModal = false" class="text-red-200 hover:text-white"><svg class="w-6 h-6"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg></button>
-                </div>
-
-                <form :action="rejectAction" method="POST" class="p-6 space-y-5">
-                    @csrf @method('PUT')
-                    <input type="hidden" name="action" value="cancel">
-
-                    <div class="text-center">
-                        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-900">Anda Yakin?</h3>
-                        <p class="text-sm text-gray-500 mt-2">
-                            Pesanan <span class="font-mono font-bold text-gray-800"
-                                x-text="'#' + modalOrder?.order_code"></span> akan dibatalkan.
-                        </p>
-                        <p class="text-xs text-red-500 mt-1">Stok produk akan dikembalikan otomatis.</p>
-                    </div>
-
-                    <div class="flex gap-3 pt-2">
-                        <button type="button" @click="rejectModal = false"
-                            class="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition">Batal</button>
-                        <button type="submit"
-                            class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition shadow-md">Ya,
-                            Tolak</button>
-                    </div>
-                </form>
             </div>
         </div>
 
