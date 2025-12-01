@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('password');
             $table->enum('role', ['admin', 'seller', 'buyer']);
             $table->string('avatar');
+            $table->text('address')->nullable();
+            $table->string('phone')->nullable();
             $table->enum('status', ['active', 'pending', 'suspended']);
             $table->timestamp('last_seen')->nullable();
             $table->timestamps();

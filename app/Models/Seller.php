@@ -47,6 +47,11 @@ class Seller extends Model
         return $this->hasMany(SellerBankAccount::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasManyThrough(Review::class, Product::class);
+    }
+
     public function getRouteKeyName()
     {
         return 'slug';

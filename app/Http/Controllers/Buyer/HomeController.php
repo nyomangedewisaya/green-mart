@@ -21,12 +21,15 @@ class HomeController extends Controller
         $categories = Category::orderBy('name')->get();
 
         // 3. Produk (PERBAIKAN DISINI)
-        $query = Product::with(['category', 'seller', 'reviews.user']) // Load reviews & user untuk modal
-            ->withAvg('reviews', 'rating') // Hitung rata-rata rating (reviews_avg_rating)
-            ->withCount('reviews') // Hitung jumlah review (reviews_count)
+        $query = Product::with(['category', 'seller', 'reviews.user'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->withCount('wishlists') // Hitung total wishlist (boleh dilihat guest)
             ->where('is_active', true)
             ->whereNull('admin_notes')
-            ->withCount('wishlists');
+            ->whereHas('seller', function ($q) {
+                $q->where('is_verified', true)->whereHas('user', fn($u) => $u->where('status', 'active'));
+            });
 
         if (Auth::check()) {
             $query->withExists([
@@ -48,6 +51,7 @@ class HomeController extends Controller
 
         // Filter Sorting
         $sort = $request->input('sort', 'newest');
+        $query->orderBy('is_featured', 'desc');
         switch ($sort) {
             case 'price_low':
                 $query->orderBy('price', 'asc');
@@ -58,6 +62,14 @@ class HomeController extends Controller
             default:
                 $query->latest();
                 break;
+        }
+
+        if (Auth::check()) {
+            $query->withExists([
+                'wishlists as is_wishlisted' => function ($q) {
+                    $q->where('user_id', Auth::id());
+                },
+            ]);
         }
 
         $products = $query->paginate(12)->appends($request->query());

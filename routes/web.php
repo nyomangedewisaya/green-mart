@@ -16,8 +16,15 @@ use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Buyer\CartController;
+use App\Http\Controllers\Buyer\CheckoutController;
 use App\Http\Controllers\Buyer\HomeController;
+use App\Http\Controllers\Buyer\NotificationController as BuyerNotificationController;
+use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
+use App\Http\Controllers\Buyer\ProfileController as BuyerProfileController;
 use App\Http\Controllers\Buyer\ReportController as BuyerReportController;
+use App\Http\Controllers\Buyer\ReviewController;
+use App\Http\Controllers\Buyer\SellerController as BuyerSellerController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\FinanceController;
@@ -30,6 +37,8 @@ use App\Http\Controllers\Seller\StatusController;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/', [HomeController::class, 'landingPage'])->name('landing');
+Route::get('/products', [HomeController::class, 'index'])->name('buyer.products.index');
+Route::get('/shop/{slug}', [BuyerSellerController::class, 'show'])->name('buyer.sellers.show');
 
 Route::prefix('auth')
     ->name('auth.')
@@ -120,18 +129,42 @@ Route::prefix('seller')
         });
     });
 
-Route::middleware(['auth', 'role:buyer', 'buyer.verified']) 
+Route::middleware(['auth', 'role:buyer', 'buyer.verified'])
     ->prefix('buyer')
-    ->name('buyer.') 
+    ->name('buyer.')
     ->group(function () {
         Route::view('/suspended', 'buyer.suspended')->name('suspended');
         Route::get('/', [HomeController::class, 'index'])->name('home');
-        Route::get('/products', [HomeController::class, 'index'])->name('products.index');
         Route::post('/report-product', [BuyerReportController::class, 'store'])->name('reports.store');
         Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
-        // Route::get('/cart', fn() => 'Keranjang')->name('cart.index');
-        // Route::get('/orders', fn() => 'Pesanan')->name('orders.index');
-        // Route::get('/profile', fn() => 'Profil')->name('profile.index');
+        Route::get('/shops', [BuyerSellerController::class, 'index'])->name('sellers.index');
+        Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+        Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
+        Route::put('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
+        Route::delete('/cart/{cart}', [CartController::class, 'destroy'])->name('cart.destroy');
+        Route::post('/checkout/confirm', [CheckoutController::class, 'create'])->name('checkout.create');
+        Route::post('/checkout/process', [CheckoutController::class, 'store'])->name('checkout.store');
+        Route::controller(BuyerOrderController::class)
+            ->prefix('orders')
+            ->name('orders.')
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{order}', 'show')->name('show');
+                Route::post('/{order}/pay', 'pay')->name('pay');
+                Route::put('/{order}/complete', 'markAsComplete')->name('complete');
+            });
+        Route::controller(BuyerNotificationController::class)
+            ->prefix('notifications')
+            ->name('notifications.')
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/mark-all', 'markAllRead')->name('markAllRead');
+                Route::post('/{id}/read', 'markAsRead')->name('read');
+                Route::delete('/{id}', 'destroy')->name('destroy');
+            });
+        Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+        Route::get('/profile', [BuyerProfileController::class, 'index'])->name('profile.index');
+        Route::put('/profile', [BuyerProfileController::class, 'update'])->name('profile.update');
     });
 
 Route::get('/chat/search-user', [ChatController::class, 'searchNewUser'])->name('chats.search_user');

@@ -49,13 +49,34 @@ class AppServiceProvider extends ServiceProvider
                         });
                 })->count();
 
-                $totalRead = DB::table('notification_user')
-                    ->where('user_id', $userId)
-                    ->whereNotNull('read_at')
-                    ->whereNull('deleted_at')
-                    ->count();
+                $totalRead = DB::table('notification_user')->where('user_id', $userId)->whereNotNull('read_at')->whereNull('deleted_at')->count();
 
                 $unreadNotifCount = max(0, $totalRelevant - $totalRead);
+                $view->with('unreadNotifCount', $unreadNotifCount);
+            }
+        });
+
+        View::composer('layouts.buyer', function ($view) {
+            if (Auth::check() && Auth::user()->role == 'buyer') {
+                $userId = Auth::id();
+
+                $totalRelevant = Notification::where(function ($q) use ($userId) {
+                    $q->where('target', 'all')
+                        ->orWhere('target', 'buyers')
+                        ->orWhere(function ($sub) use ($userId) {
+                            $sub->where('target', 'personal')->where('user_id', $userId);
+                        });
+                })->count();
+
+                $totalReadOrDeleted = DB::table('notification_user')
+                    ->where('user_id', $userId)
+                    ->where(function ($q) {
+                        $q->whereNotNull('read_at')->orWhereNotNull('deleted_at');
+                    })
+                    ->count();
+
+                $unreadNotifCount = max(0, $totalRelevant - $totalReadOrDeleted);
+
                 $view->with('unreadNotifCount', $unreadNotifCount);
             }
         });
